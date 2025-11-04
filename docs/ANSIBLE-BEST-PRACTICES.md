@@ -5,6 +5,8 @@ Comprehensive Ansible development guide incorporating [Red Hat CoP Automation Go
 ## Table of Contents
 
 - [The Zen of Ansible](#the-zen-of-ansible)
+- [AAP Configuration as Code](#aap-configuration-as-code)
+- [Inventory Management](#inventory-management)
 - [Role Design](#role-design)
 - [Task Writing](#task-writing)
 - [Variable Management](#variable-management)
@@ -43,6 +45,824 @@ Automation is a continuous journey that never ends.
 ```
 
 **Reference**: [Red Hat CoP - Guiding Principles](https://redhat-cop.github.io/automation-good-practices/#_guiding_principles_for_automation_good_practices)
+
+---
+
+## AAP Configuration as Code
+
+### Use infra.aap_configuration Collection
+
+**Principle**: Manage AAP configuration declaratively using Git and the `infra.aap_configuration` collection.
+
+**Why Configuration as Code**:
+- ✅ **Version Control**: All AAP config changes tracked in Git
+- ✅ **Reproducibility**: Rebuild AAP environments from scratch
+- ✅ **Consistency**: Same configuration across Dev/QA/Prod
+- ✅ **Auditability**: Clear history of who changed what when
+- ✅ **Automation**: Apply config via CI/CD pipelines
+- ✅ **Disaster Recovery**: Restore AAP configuration quickly
+
+### The infra.aap_configuration Collection
+
+**Collection**: `infra.aap_configuration` (Red Hat CoP)
+
+This certified collection provides Ansible roles for managing all AAP objects:
+- Organizations, Teams, Users
+- Credentials, Credential Types
+- Inventories, Inventory Sources, Groups, Hosts
+- Projects
+- Job Templates, Workflow Templates
+- Schedules, Notifications
+- Execution Environments
+- Settings
+
+**Installation**:
+```yaml
+# collections/requirements.yml
+collections:
+  - name: infra.aap_configuration
+    version: "2.9.0"  # Always pin to exact version
+```
+
+### Using the dispatch Role
+
+**Recommended Pattern**: Use `infra.aap_configuration.dispatch` for streamlined configuration.
+
+```yaml
+# playbook.yml
+---
+- name: Configure AAP
+  hosts: aap_dev
+  connection: local
+  gather_facts: false
+  
+  tasks:
+    - name: Apply AAP Configuration
+      ansible.builtin.include_role:
+        name: infra.aap_configuration.dispatch
+```
+
+The `dispatch` role automatically:
+1. Reads variables from `group_vars` and `host_vars`
+2. Applies configuration in the correct order (dependencies first)
+3. Handles idempotency (only changes what's needed)
+4. Provides clear output of changes made
+
+### Configuration Structure
+
+**Repository**: `aap-config-as-code`
+
+```
+aap-config-as-code/
+├── playbook.yml                    # Main CaC playbook
+├── inventory.yml                   # AAP controllers (targets)
+├── collections/
+│   └── requirements.yml            # infra.aap_configuration pinned
+├── group_vars/
+│   ├── all/                        # Shared across all environments
+│   │   ├── organizations.yml
+│   │   ├── teams.yml
+│   │   ├── credential_types.yml
+│   │   └── labels.yml
+│   ├── aap_dev/                    # Dev-specific
+│   │   ├── credentials.yml
+│   │   ├── inventories.yml
+│   │   ├── projects.yml
+│   │   ├── job_templates.yml
+│   │   └── schedules.yml
+│   ├── aap_qa/                     # QA-specific
+│   │   └── ...
+│   └── aap_prod/                   # Prod-specific
+│       └── ...
+└── README.md
+```
+
+### Complete Example: Configure Organizations
+
+```yaml
+# group_vars/all/organizations.yml
+
+controller_organizations:
+  - name: "Platform"
+    description: "Platform engineering team"
+    galaxy_credentials:
+      - "Ansible Galaxy"
+    default_environment: "Default Execution Environment"
+    
+  - name: "Application Teams"
+    description: "Application development teams"
+    galaxy_credentials:
+      - "Ansible Galaxy"
+```
+
+### Complete Example: Configure Job Templates
+
+```yaml
+# group_vars/aap_dev/job_templates.yml
+
+controller_templates:
+  - name: "Deploy Webserver - Dev"
+    description: "Deploy Apache webserver to development"
+    organization: "Platform"
+    inventory: "Dev Infrastructure"
+    project: "Automation Collection"
+    scm_branch: "main"  # Dev uses main branch
+    execution_environment: "Automation EE - Latest"
+    playbook: "playbooks/deploy-webserver.yml"
+    
+    credentials:
+      - "Dev SSH Key"
+      - "Dev Vault Credential"
+    
+    ask_variables_on_launch: true
+    ask_limit_on_launch: true
+    
+    survey_enabled: false
+    concurrent_jobs_enabled: true
+    
+    extra_vars:
+      webserver_port: 8080
+      webserver_ssl_enabled: false
+    
+    labels:
+      - "dev"
+      - "webserver"
+```
+
+### Common CaC Patterns
+
+#### Pattern 1: Environment-Specific Variables
+
+```yaml
+# group_vars/aap_dev/job_templates.yml
+controller_templates:
+  - name: "Deploy Webserver - Dev"
+    extra_vars:
+      webserver_port: 8080
+      webserver_ssl_enabled: false
+
+# group_vars/aap_prod/job_templates.yml
+controller_templates:
+  - name: "Deploy Webserver - Prod"
+    extra_vars:
+      webserver_port: 443
+      webserver_ssl_enabled: true
+```
+
+#### Pattern 2: Variable Merging with Suffixes
+
+```yaml
+# group_vars/aap_dev/inventories.yml
+# Using _dev suffix for automatic merging
+
+controller_inventories_dev:
+  - name: "Dev Infrastructure"
+    organization: "Platform"
+
+controller_inventory_sources_dev:
+  - name: "Dev OCP-V VMs"
+    inventory: "Dev Infrastructure"
+    source: "openshift_virtualization"
+```
+
+**Note**: The `dispatch` role merges variables with suffixes like `controller_*_dev`, `controller_*_qa`, etc.
+
+#### Pattern 3: Shared Configuration in 'all'
+
+```yaml
+# group_vars/all/organizations.yml
+# Applies to ALL environments
+
+controller_organizations:
+  - name: "Platform"
+    description: "Platform engineering"
+
+# group_vars/all/labels.yml
+controller_labels:
+  - name: "webserver"
+    organization: "Platform"
+  - name: "database"
+    organization: "Platform"
+```
+
+### Running CaC Playbook
+
+```bash
+# Apply configuration to Dev
+cd aap-config-as-code
+ansible-playbook playbook.yml -i inventory.yml -l aap_dev
+
+# Apply to QA
+ansible-playbook playbook.yml -i inventory.yml -l aap_qa
+
+# Apply to Prod (with vault password)
+ansible-playbook playbook.yml -i inventory.yml -l aap_prod --ask-vault-pass
+
+# Dry-run (check mode)
+ansible-playbook playbook.yml -i inventory.yml -l aap_dev --check --diff
+```
+
+### CaC via Tekton Pipeline
+
+**Automated Application**: Trigger CaC on Git changes
+
+```yaml
+# tekton/pipelines/apply-aap-config.yaml
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: apply-aap-config
+spec:
+  params:
+    - name: environment
+      description: "Target environment (dev, qa, prod)"
+    - name: git-revision
+      description: "Git tag to apply (e.g., qa-v1.1.0)"
+  
+  tasks:
+    - name: git-clone
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: "https://github.com/org/aap-config-as-code"
+        - name: revision
+          value: $(params.git-revision)
+    
+    - name: run-cac
+      runAfter: [git-clone]
+      taskSpec:
+        params:
+          - name: environment
+        steps:
+          - name: apply-config
+            image: quay.io/ansible/creator-ee:latest
+            script: |
+              #!/bin/bash
+              cd /workspace/source
+              ansible-galaxy collection install -r collections/requirements.yml
+              ansible-playbook playbook.yml \
+                -i inventory.yml \
+                -l aap_$(params.environment) \
+                -e controller_hostname=$CONTROLLER_HOST \
+                -e controller_oauthtoken=$CONTROLLER_TOKEN
+      params:
+        - name: environment
+          value: $(params.environment)
+```
+
+### Variable Precedence
+
+Understanding variable precedence in CaC:
+
+```
+1. Extra vars (command line -e)
+2. Task vars
+3. Block vars
+4. Role vars
+5. Include vars
+6. Set_facts / registered vars
+7. Include_vars
+8. Play vars_files
+9. Play vars_prompt
+10. Play vars
+11. Host facts
+12. Playbook host_vars
+13. Playbook group_vars/all
+14. Playbook group_vars/*
+15. Inventory host_vars
+16. Inventory group_vars
+17. Inventory vars
+18. Role defaults
+```
+
+**For CaC**: `group_vars/aap_dev/` overrides `group_vars/all/`
+
+### Secrets Management
+
+**Principle**: Never commit secrets to Git. Use environment variables or vault.
+
+```yaml
+# group_vars/aap_dev/credentials.yml
+
+controller_credentials:
+  - name: "Dev SSH Key"
+    credential_type: "Machine"
+    inputs:
+      username: "ansible"
+      # ✅ GOOD: Reference environment variable
+      ssh_key_data: "{{ lookup('env', 'SSH_PRIVATE_KEY_DEV') }}"
+      
+      # ❌ BAD: Hardcoded secret
+      # ssh_key_data: "-----BEGIN RSA PRIVATE KEY-----..."
+```
+
+**Vault Usage**:
+```bash
+# Encrypt sensitive files
+ansible-vault encrypt group_vars/aap_prod/credentials.yml
+
+# Edit encrypted file
+ansible-vault edit group_vars/aap_prod/credentials.yml
+
+# Run with vault
+ansible-playbook playbook.yml --ask-vault-pass
+```
+
+### Idempotency Testing
+
+**Always test for idempotency**:
+
+```bash
+# Run once
+ansible-playbook playbook.yml -i inventory.yml -l aap_dev
+
+# Run again (should show no changes)
+ansible-playbook playbook.yml -i inventory.yml -l aap_dev
+
+# Expected output: "ok=X changed=0 unreachable=0 failed=0"
+```
+
+### Best Practices Summary
+
+1. ✅ **Always use exact versions** of `infra.aap_configuration`
+2. ✅ **Use dispatch role** for simplified workflow
+3. ✅ **Organize by environment** (group_vars/aap_dev, aap_qa, aap_prod)
+4. ✅ **Shared config in 'all'** (organizations, credential types, labels)
+5. ✅ **Never commit secrets** - use environment variables or vault
+6. ✅ **Test idempotency** - run twice, expect no changes
+7. ✅ **Use check mode** (`--check --diff`) before applying
+8. ✅ **Apply via CI/CD** (Tekton pipeline) for consistency
+9. ✅ **Version control everything** - Git is source of truth
+10. ✅ **Document changes** in Git commit messages
+
+### Common CaC Tasks
+
+**Create Organization**:
+```yaml
+controller_organizations:
+  - name: "New Team"
+    description: "Description"
+    galaxy_credentials:
+      - "Ansible Galaxy"
+```
+
+**Create Credential**:
+```yaml
+controller_credentials:
+  - name: "GitHub Token"
+    organization: "Platform"
+    credential_type: "Source Control"
+    inputs:
+      username: "github-bot"
+      password: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+```
+
+**Create Inventory with Dynamic Source**:
+```yaml
+controller_inventories:
+  - name: "QA Infrastructure"
+    organization: "Platform"
+
+controller_inventory_sources:
+  - name: "QA OCP-V VMs"
+    inventory: "QA Infrastructure"
+    source: "openshift_virtualization"
+    source_vars:
+      plugin: "kubevirt.core.kubevirt"
+      connections:
+        - namespaces: [qa-vms]
+    credential: "OCP QA Cluster"
+    update_on_launch: true
+```
+
+**Create Job Template**:
+```yaml
+controller_templates:
+  - name: "Deploy App"
+    organization: "Platform"
+    inventory: "QA Infrastructure"
+    project: "App Playbooks"
+    playbook: "deploy.yml"
+    execution_environment: "App EE - qa-v1.0.0"
+    credentials:
+      - "QA SSH Key"
+```
+
+**Create Workflow Template**:
+```yaml
+controller_workflows:
+  - name: "Full Deployment Workflow"
+    organization: "Platform"
+    inventory: "QA Infrastructure"
+    
+controller_workflow_job_templates:
+  - identifier: "deploy-db"
+    workflow: "Full Deployment Workflow"
+    unified_job_template: "Deploy Database"
+    
+  - identifier: "deploy-app"
+    workflow: "Full Deployment Workflow"
+    unified_job_template: "Deploy Application"
+    success_nodes:
+      - "deploy-db"
+```
+
+### Troubleshooting CaC
+
+**Issue**: Changes not applied
+
+**Solutions**:
+1. Check connectivity: `curl -k https://aap.example.com/api/v2/ping/`
+2. Verify credentials: Check `CONTROLLER_HOST`, `CONTROLLER_USERNAME`, `CONTROLLER_PASSWORD`
+3. Check logs: Look for "skipped" tasks in Ansible output
+4. Validate YAML: `yamllint group_vars/`
+5. Check variable names: Must match `controller_*` pattern
+
+**Issue**: "Object already exists" error
+
+**Solution**: The `dispatch` role handles idempotency. If you see this, you may be using individual roles instead of dispatch.
+
+**Issue**: Wrong order of operations
+
+**Solution**: Use `dispatch` role - it automatically applies configuration in the correct dependency order:
+1. Organizations
+2. Credential Types
+3. Credentials
+4. Projects
+5. Inventories
+6. Job Templates
+7. Workflows
+
+**Reference**: 
+- [Red Hat CoP - infra.aap_configuration](https://github.com/redhat-cop/aap_configuration)
+- [Collection Documentation](https://ansible.readthedocs.io/projects/aap-configuration/)
+- [Red Hat CoP - AAP Configuration Examples](https://redhat-cop.github.io/automation-good-practices/#_ansible_automation_platform_configuration_as_code)
+
+---
+
+## Inventory Management
+
+### Use Dynamic Inventory - Always
+
+**Principle**: Never use static inventory files. Always use dynamic inventory sources.
+
+**Why Dynamic Inventory**:
+- ✅ **Single Source of Truth**: Inventory syncs from authoritative systems
+- ✅ **Always Current**: No stale host lists
+- ✅ **Scalability**: Automatically discovers new hosts
+- ✅ **Reduced Maintenance**: No manual inventory file updates
+- ✅ **Constitutional Compliance**: Aligns with GitOps First (Article I)
+
+### Configure AAP Inventory Sources
+
+**Principle**: Use AAP's built-in Inventory Source functionality to pull from dynamic sources.
+
+```yaml
+# AAP Inventory Configuration (via CaC)
+# File: group_vars/aap_dev/inventories.yml
+
+controller_inventories:
+  - name: "OCP Virtualization Inventory"
+    organization: "Platform Team"
+    description: "Dynamic inventory from OpenShift Virtualization"
+    
+controller_inventory_sources:
+  - name: "OCP-V Dynamic Source"
+    inventory: "OCP Virtualization Inventory"
+    source: "openshift_virtualization"  # Built-in inventory plugin
+    source_vars:
+      plugin: "kubevirt.core.kubevirt"
+      connections:
+        - namespaces:
+            - vm-prod
+            - vm-qa
+            - vm-dev
+          network_name: default
+      host_format: "name"
+      api_version: "v1"
+    credential: "OCP API Token"
+    update_on_launch: true
+    update_cache_timeout: 300  # 5 minutes
+    overwrite: true
+    overwrite_vars: true
+```
+
+### Supported Dynamic Inventory Sources
+
+| Source | AAP Source Type | Use Case |
+|--------|----------------|----------|
+| **OpenShift Virtualization (OCP-V)** | `openshift_virtualization` | VMs running on OpenShift |
+| **Red Hat Virtualization (RHV)** | `rhv` | RHV/oVirt managed VMs |
+| **VMware vCenter** | `vmware` | VMware ESXi VMs |
+| **Amazon AWS** | `ec2` | EC2 instances |
+| **Microsoft Azure** | `azure_rm` | Azure VMs |
+| **Google Cloud** | `gcp_compute` | GCP instances |
+| **Red Hat Satellite** | `satellite6` | Satellite-managed hosts |
+| **ServiceNow CMDB** | `servicenow` | CMDB as source of truth |
+
+### Example: OCP Virtualization (Primary Recommendation)
+
+**OCP-V is the preferred inventory source** for OpenShift-based VM management.
+
+```yaml
+# Complete OCP-V Inventory Source Configuration
+controller_inventory_sources:
+  - name: "Production VMs from OCP-V"
+    inventory: "Production Inventory"
+    source: "openshift_virtualization"
+    source_vars:
+      plugin: "kubevirt.core.kubevirt"
+      connections:
+        - namespaces:
+            - production-vms
+            - production-apps
+          network_name: "production-network"
+      host_format: "name"  # Use VM name as hostname
+      api_version: "v1"
+      label_selector: "environment=production"  # Filter by labels
+      append_base_domain: "prod.example.com"  # Add domain suffix
+    credential: "OCP Production API Token"
+    update_on_launch: true
+    update_on_project_update: true
+    update_cache_timeout: 300
+    overwrite: true
+    overwrite_vars: true
+    verbosity: 1
+```
+
+**Key Parameters**:
+- `namespaces`: OpenShift namespaces containing VMs
+- `network_name`: Network interface to use for connectivity
+- `label_selector`: Filter VMs by Kubernetes labels
+- `host_format`: How to name hosts (name, fqdn, ip, etc.)
+- `append_base_domain`: Add DNS suffix to hostnames
+
+### Example: Multiple Environment Inventories
+
+```yaml
+# Dev Environment
+controller_inventories:
+  - name: "Dev - OCP-V Inventory"
+    organization: "Platform Team"
+    description: "Development VMs from OpenShift Virtualization"
+
+controller_inventory_sources:
+  - name: "Dev OCP-V Source"
+    inventory: "Dev - OCP-V Inventory"
+    source: "openshift_virtualization"
+    source_vars:
+      plugin: "kubevirt.core.kubevirt"
+      connections:
+        - namespaces:
+            - dev-vms
+            - dev-test
+          network_name: default
+      label_selector: "environment=dev"
+    credential: "OCP Dev API Token"
+    update_on_launch: true
+```
+
+```yaml
+# QA Environment
+controller_inventory_sources:
+  - name: "QA OCP-V Source"
+    inventory: "QA - OCP-V Inventory"
+    source: "openshift_virtualization"
+    source_vars:
+      plugin: "kubevirt.core.kubevirt"
+      connections:
+        - namespaces:
+            - qa-vms
+          network_name: default
+      label_selector: "environment=qa"
+    credential: "OCP QA API Token"
+    update_on_launch: true
+```
+
+```yaml
+# Production Environment
+controller_inventory_sources:
+  - name: "Prod OCP-V Source"
+    inventory: "Prod - OCP-V Inventory"
+    source: "openshift_virtualization"
+    source_vars:
+      plugin: "kubevirt.core.kubevirt"
+      connections:
+        - namespaces:
+            - prod-vms
+            - prod-apps
+          network_name: production
+      label_selector: "environment=production"
+    credential: "OCP Prod API Token"
+    update_on_launch: true
+    update_cache_timeout: 300
+```
+
+### Inventory Variables via CaC
+
+**Principle**: Define inventory variables in CaC, not in AAP UI.
+
+```yaml
+# Group Variables in CaC
+# File: group_vars/aap_prod/inventory_groups.yml
+
+controller_groups:
+  - name: "webservers"
+    inventory: "Prod - OCP-V Inventory"
+    variables:
+      ansible_user: "automation"
+      webserver_port: 443
+      webserver_ssl_enabled: true
+
+  - name: "databases"
+    inventory: "Prod - OCP-V Inventory"
+    variables:
+      ansible_user: "automation"
+      database_backup_enabled: true
+      database_backup_schedule: "0 2 * * *"
+```
+
+### Inventory Sync Strategy
+
+**Automatic Sync**:
+- ✅ `update_on_launch: true` - Sync before every job
+- ✅ `update_on_project_update: true` - Sync when project syncs
+- ✅ `update_cache_timeout: 300` - Cache for 5 minutes
+
+**Manual Sync**:
+- Via AAP UI: Inventory → Sources → Sync
+- Via API: `POST /api/v2/inventory_sources/{id}/update/`
+- Via CaC: Include sync job in workflow
+
+### Anti-Patterns: What NOT to Do
+
+#### ❌ Static Inventory Files
+
+```yaml
+# BAD - Never do this in aap-config-as-code repo
+# File: inventory/hosts.yml  ❌ DO NOT CREATE
+
+[webservers]
+web01.example.com
+web02.example.com
+web03.example.com
+
+[databases]
+db01.example.com
+db02.example.com
+```
+
+**Why it's bad**:
+- Becomes stale immediately
+- Manual maintenance required
+- No single source of truth
+- Doesn't scale
+- Violates GitOps principles
+
+#### ❌ Mixing Static and Dynamic
+
+```yaml
+# BAD - Don't mix approaches
+controller_hosts:  # ❌ Manual host definitions
+  - name: "special-server.example.com"
+    inventory: "Prod - OCP-V Inventory"
+    variables:
+      ansible_host: "10.0.1.50"
+```
+
+**Instead**: Use dynamic inventory with proper labeling/tagging in the source system.
+
+#### ❌ Hardcoded IP Addresses
+
+```yaml
+# BAD - Hardcoded IPs
+- hosts: "10.0.1.50,10.0.1.51,10.0.1.52"  # ❌
+  tasks:
+    - name: Do something
+```
+
+**Instead**: Use dynamic inventory groups:
+
+```yaml
+# GOOD - Use dynamic groups
+- hosts: webservers  # ✅ Defined by dynamic inventory
+  tasks:
+    - name: Do something
+```
+
+### Complete Example: OCP-V with CaC
+
+```yaml
+# File: group_vars/aap_prod/inventories.yml
+
+# Define Inventory
+controller_inventories:
+  - name: "Production Infrastructure"
+    organization: "Platform Team"
+    description: "All production VMs from OpenShift Virtualization"
+
+# Define Dynamic Source
+controller_inventory_sources:
+  - name: "OCP-V Production VMs"
+    inventory: "Production Infrastructure"
+    source: "openshift_virtualization"
+    source_vars:
+      plugin: "kubevirt.core.kubevirt"
+      connections:
+        - namespaces:
+            - prod-web
+            - prod-app
+            - prod-data
+          network_name: "production-network"
+      host_format: "name"
+      label_selector: "tier in (frontend,backend,database)"
+      append_base_domain: "prod.internal.example.com"
+    credential: "OCP Production Cluster"
+    update_on_launch: true
+    update_on_project_update: true
+    update_cache_timeout: 300
+    overwrite: true
+    overwrite_vars: true
+
+# Define Groups (based on dynamic inventory host vars)
+controller_groups:
+  - name: "webservers"
+    inventory: "Production Infrastructure"
+    variables:
+      ansible_user: "svc_ansible"
+      webserver_port: 443
+      
+  - name: "databases"
+    inventory: "Production Infrastructure"
+    variables:
+      ansible_user: "svc_ansible"
+      database_max_connections: 200
+```
+
+### Inventory Credential Configuration
+
+```yaml
+# OCP API Token Credential for Inventory Source
+controller_credentials:
+  - name: "OCP Production Cluster"
+    organization: "Platform Team"
+    credential_type: "OpenShift or Kubernetes API Bearer Token"
+    inputs:
+      host: "https://api.ocp-prod.example.com:6443"
+      bearer_token: "{{ lookup('env', 'OCP_PROD_TOKEN') }}"  # From AAP credential
+      verify_ssl: true
+```
+
+### Testing Dynamic Inventory
+
+```bash
+# Test inventory sync via API
+curl -X POST https://aap.example.com/api/v2/inventory_sources/1/update/ \
+  -H "Authorization: Bearer $AAP_TOKEN"
+
+# Check inventory hosts
+curl https://aap.example.com/api/v2/inventories/1/hosts/ \
+  -H "Authorization: Bearer $AAP_TOKEN"
+
+# Test with ansible-inventory (if running locally)
+ansible-inventory -i inventory_script.py --list
+```
+
+### Troubleshooting Dynamic Inventory
+
+**Issue**: Hosts not appearing in inventory
+
+**Solutions**:
+1. Check namespace permissions in OCP
+2. Verify credential has correct permissions
+3. Check label_selector matches VM labels
+4. Review inventory source sync logs in AAP
+5. Ensure VMs are in "Running" state
+
+**Issue**: Inventory sync failing
+
+**Solutions**:
+1. Test API connectivity: `curl -k https://api.ocp.example.com:6443/healthz`
+2. Verify token hasn't expired
+3. Check AAP logs: `/var/log/tower/`
+4. Increase verbosity in inventory source config
+
+### Best Practices Summary
+
+1. ✅ **Always use dynamic inventory** - Never static files
+2. ✅ **OCP-V is preferred** for OpenShift VM management
+3. ✅ **One inventory per environment** (Dev, QA, Prod)
+4. ✅ **Configure via CaC** - All inventory config in Git
+5. ✅ **Use label selectors** - Filter hosts at source
+6. ✅ **Enable update_on_launch** - Always fresh inventory
+7. ✅ **Cache appropriately** - Balance freshness vs. API load
+8. ✅ **Separate credentials per environment** - Security isolation
+
+**Reference**: 
+- [Red Hat CoP - Inventory Best Practices](https://redhat-cop.github.io/automation-good-practices/)
+- [OpenShift Virtualization Inventory Plugin](https://docs.ansible.com/ansible/latest/collections/kubevirt/core/kubevirt_inventory.html)
+- [AAP Inventory Sources](https://docs.ansible.com/automation-controller/latest/html/userguide/inventories.html)
 
 ---
 

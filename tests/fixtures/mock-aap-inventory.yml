@@ -1,6 +1,10 @@
 ---
-# Mock AAP inventory for testing
+# Mock AAP inventory for testing ONLY
 # This is used for local testing without actual AAP instances
+#
+# ⚠️ WARNING: This is a TEST FIXTURE only!
+# NEVER use static inventory files in production aap-config-as-code repo.
+# Always use dynamic inventory from OCP-V or other sources in production.
 all:
   children:
     aap_dev:

@@ -20,36 +20,40 @@ graph LR
 
 ---
 
-## Complete Promotion Pipeline
+## Complete Promotion Pipeline with Git Tags
 
 ```mermaid
 graph TB
     subgraph "Development Phase"
-        CODE[Code Changes<br/>Multiple Repos]
+        CODE[Code Changes<br/>Feature Branch]
         TEST1[GitHub Actions<br/>Tests & Linting]
         MERGE[Merge to Main]
+        TAG_DEV[Create Dev Tag<br/>dev-abc123]
     end
 
     subgraph "Build Phase"
         BUILD_COL[Build Collection]
-        BUILD_EE[Build EE Image]
+        BUILD_EE[Build EE Image<br/>ee:dev-abc123]
         TEST_BUILD[Post-Build Tests]
     end
 
     subgraph "Release Phase"
-        MANIFEST_DEV[Create Release Manifest<br/>dev-20250104-abc123]
+        MANIFEST_DEV[Create Release Manifest<br/>dev-abc123.yaml]
         PUBLISH[Publish to Registries]
     end
 
     subgraph "Dev Environment"
+        SYNC_DEV[AAP Dev Project<br/>Sync to main/dev tag]
         DEPLOY_DEV[Deploy to AAP Dev]
         SMOKE_DEV[Smoke Tests]
         VALIDATE_DEV[Validation Tests]
     end
 
     subgraph "QA Promotion"
-        PROMOTE_QA[Promote Request]
-        MANIFEST_QA[Update Manifest<br/>qa-20250104-001]
+        TAG_QA[Create QA Tag<br/>git tag qa-v1.1.0]
+        MANIFEST_QA[Create Manifest<br/>qa-v1.1.0.yaml]
+        BUILD_EE_QA[Build EE<br/>ee:qa-v1.1.0]
+        SYNC_QA[AAP QA Project<br/>Sync to qa-v1.1.0]
         DEPLOY_QA[Deploy to AAP QA]
         TEST_QA[Full Test Suite]
         APPROVE_QA[QA Sign-off]
@@ -58,43 +62,96 @@ graph TB
     subgraph "Prod Promotion"
         CAB[Change Advisory Board]
         APPROVE_PROD[Production Approval]
+        TAG_PROD[Create Prod Tag<br/>git tag prod-v1.0.0]
         BACKUP[Backup Rollback Point]
-        MANIFEST_PROD[Update Manifest<br/>prod-20250104-001]
+        MANIFEST_PROD[Create Manifest<br/>prod-v1.0.0.yaml]
+        BUILD_EE_PROD[Build EE<br/>ee:prod-v1.0.0]
+        SYNC_PROD[AAP Prod Project<br/>Sync to prod-v1.0.0]
         DEPLOY_PROD[Deploy to AAP Prod]
         VERIFY_PROD[Production Verification]
     end
 
     CODE --> TEST1
     TEST1 -->|Pass| MERGE
-    MERGE --> BUILD_COL
-    MERGE --> BUILD_EE
+    MERGE --> TAG_DEV
+    TAG_DEV --> BUILD_COL
+    TAG_DEV --> BUILD_EE
     BUILD_COL --> TEST_BUILD
     BUILD_EE --> TEST_BUILD
     TEST_BUILD -->|Pass| MANIFEST_DEV
     MANIFEST_DEV --> PUBLISH
-    PUBLISH --> DEPLOY_DEV
+    PUBLISH --> SYNC_DEV
+    SYNC_DEV --> DEPLOY_DEV
     DEPLOY_DEV --> SMOKE_DEV
     SMOKE_DEV --> VALIDATE_DEV
-    VALIDATE_DEV -->|Pass| PROMOTE_QA
+    VALIDATE_DEV -->|Pass| TAG_QA
 
-    PROMOTE_QA --> MANIFEST_QA
-    MANIFEST_QA --> DEPLOY_QA
+    TAG_QA --> MANIFEST_QA
+    TAG_QA --> BUILD_EE_QA
+    MANIFEST_QA --> SYNC_QA
+    BUILD_EE_QA --> SYNC_QA
+    SYNC_QA --> DEPLOY_QA
     DEPLOY_QA --> TEST_QA
     TEST_QA -->|Pass| APPROVE_QA
 
     APPROVE_QA --> CAB
     CAB --> APPROVE_PROD
-    APPROVE_PROD --> BACKUP
+    APPROVE_PROD --> TAG_PROD
+    TAG_PROD --> BACKUP
     BACKUP --> MANIFEST_PROD
-    MANIFEST_PROD --> DEPLOY_PROD
+    TAG_PROD --> BUILD_EE_PROD
+    MANIFEST_PROD --> SYNC_PROD
+    BUILD_EE_PROD --> SYNC_PROD
+    SYNC_PROD --> DEPLOY_PROD
     DEPLOY_PROD --> VERIFY_PROD
 
     style MERGE fill:#4ecdc4
-    style MANIFEST_DEV fill:#4ecdc4
-    style APPROVE_QA fill:#ffd93d
-    style APPROVE_PROD fill:#ff6b6b
+    style TAG_DEV fill:#4ecdc4
+    style TAG_QA fill:#ffd93d
+    style TAG_PROD fill:#ff6b6b
     style DEPLOY_PROD fill:#95e1d3
 ```
+
+---
+
+## Git Tag-Based Promotion Strategy
+
+### Tag Naming Convention
+
+| Environment | Tag Format | Example | Created When |
+|-------------|------------|---------|--------------|
+| **Development** | `dev-<short-sha>` | `dev-abc123` | Automatic on merge to main |
+| **QA** | `qa-v<major>.<minor>.<patch>` | `qa-v1.1.0` | Manual, when ready for QA |
+| **Production** | `prod-v<major>.<minor>.<patch>` | `prod-v1.0.0` | Manual, after CAB approval |
+
+### Tag Immutability
+
+- **Dev tags**: May be ephemeral, deleted after promotion
+- **QA/Prod tags**: **IMMUTABLE** - never deleted or moved
+- **Semantic Versioning**: QA and Prod follow [SemVer](https://semver.org/)
+- **AAP Projects**: Configure to checkout specific tags (not branch names)
+
+### Example Tag Creation
+
+```bash
+# Development (automatic)
+git checkout main
+git pull
+git tag dev-$(git rev-parse --short HEAD)
+git push origin dev-$(git rev-parse --short HEAD)
+
+# QA (manual)
+git tag -a qa-v1.1.0 -m "Release 1.1.0 for QA testing"
+git push origin qa-v1.1.0
+
+# Production (manual, after approval)
+git tag -a prod-v1.0.0 -m "Production Release 1.0.0
+Approved by: CAB
+Change: CHG0001234"
+git push origin prod-v1.0.0
+```
+
+**See**: [BRANCHING-STRATEGY.md](../BRANCHING-STRATEGY.md) for complete workflow
 
 ---
 
@@ -105,24 +162,27 @@ graph TB
 ```mermaid
 graph TB
     subgraph "Dev Manifest"
-        DEV_M["release-dev-20250104-abc123.yaml"]
-        DEV_COL["collection: 1.0.0-dev"]
-        DEV_EE["ee-image: latest-dev"]
+        DEV_M["release-dev-abc123.yaml"]
+        DEV_TAG["git-tag: dev-abc123"]
+        DEV_COL["collection-commit: abc1234..."]
+        DEV_EE["ee-image: ee:dev-abc123"]
         DEV_AAP["aap-config: main"]
     end
 
     subgraph "QA Manifest"
-        QA_M["release-qa-20250104-001.yaml"]
-        QA_COL["collection: 1.0.0"]
-        QA_EE["ee-image: 1.0.0"]
-        QA_AAP["aap-config: v1.0.0"]
+        QA_M["release-qa-v1.1.0.yaml"]
+        QA_TAG["git-tag: qa-v1.1.0"]
+        QA_COL["collection-commit: abc1234..."]
+        QA_EE["ee-image: ee:qa-v1.1.0"]
+        QA_AAP["aap-config-tag: qa-v1.1.0"]
     end
 
     subgraph "Prod Manifest"
-        PROD_M["release-prod-20250104-001.yaml"]
-        PROD_COL["collection: 1.0.0"]
-        PROD_EE["ee-image: 1.0.0"]
-        PROD_AAP["aap-config: v1.0.0"]
+        PROD_M["release-prod-v1.0.0.yaml"]
+        PROD_TAG["git-tag: prod-v1.0.0"]
+        PROD_COL["collection-commit: abc1234..."]
+        PROD_EE["ee-image: ee:prod-v1.0.0"]
+        PROD_AAP["aap-config-tag: prod-v1.0.0"]
         PROD_APPROVED["approved: true<br/>approved-by: CAB<br/>approved-at: 2025-01-04T15:30:00Z"]
     end
 

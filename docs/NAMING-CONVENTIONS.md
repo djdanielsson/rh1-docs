@@ -581,23 +581,28 @@ patch-sched
 
 ### Branch Names
 
+**Main Branch**:
+```
+main  # or master (single source of truth)
+```
+
+**Feature/Fix Branches**:
 ```
 # Format: {type}/{description}
 
-# Feature branches
+# Feature branches (short-lived)
 feature/add-webserver-role
 feature/implement-workflow-template
+feat/configure-monitoring
 
 # Bug fixes
 fix/correct-inventory-validation
 fix/update-firewall-rules
+bugfix/ee-build-failure
 
-# Hotfixes
+# Hotfixes (emergency production fixes)
 hotfix/security-patch
 hotfix/critical-bug
-
-# Release branches
-release/v1.0.0
 release/v1.1.0-rc1
 
 # Not:
@@ -640,22 +645,72 @@ ci:       CI/CD changes
 perf:     Performance improvement
 ```
 
-### Tags
+### Git Tags
 
-```
+**Environment-Specific Tags** (for promotion):
+
+| Environment | Format | Example | Usage |
+|-------------|--------|---------|-------|
+| **Development** | `dev-<short-sha>` | `dev-abc123` | Automatic on merge |
+| **QA** | `qa-v<major>.<minor>.<patch>` | `qa-v1.1.0` | Manual, semantic version |
+| **Production** | `prod-v<major>.<minor>.<patch>` | `prod-v1.0.0` | Manual, with approval |
+
+**Semantic Version Tags**:
+```bash
 # Format: v{major}.{minor}.{patch}[-{prerelease}]
 
-v1.0.0
-v1.1.0
-v1.1.1
-v2.0.0-rc1
-v2.0.0-beta
+v1.0.0        # Major release
+v1.1.0        # Minor release (new features)
+v1.1.1        # Patch release (bug fixes)
+v2.0.0-rc1    # Release candidate
+v2.0.0-beta   # Beta release
+
+# Environment-specific examples:
+dev-a1b2c3d    # Dev deployment (auto-generated)
+qa-v1.2.0      # QA release
+prod-v1.1.0    # Production release
 
 # Not:
-version-1.0
-release-1.0
-1.0.0
+version-1.0    # Missing standard prefix
+release-1.0    # Wrong prefix
+1.0.0          # No 'v' prefix
+latest         # Too generic, not immutable
 ```
+
+**Tag Message Guidelines**:
+```bash
+# Good - Detailed tag message
+git tag -a qa-v1.2.0 -m "Release 1.2.0 for QA testing
+
+Features:
+- Add webserver role with HA support
+- Add database backup automation
+- Update monitoring configuration
+
+Testing:
+- All molecule tests pass
+- Integration tests successful
+- Security scan clean
+
+QA Ticket: QA-1234"
+
+# Production tag with approval info
+git tag -a prod-v1.1.0 -m "Production Release 1.1.0
+
+Approved by: CAB
+Change Ticket: CHG0001234
+Approval Date: 2025-01-04
+
+Rollback Plan: Revert to prod-v1.0.0"
+```
+
+**Tag Immutability Rules**:
+- ✅ Dev tags: May be deleted after promotion (ephemeral)
+- ❌ QA/Prod tags: **NEVER** delete or move
+- ❌ **NEVER** force-push tags: `git push --force origin <tag>`
+- ❌ **NEVER** reuse tag names on different commits
+
+**See**: [BRANCHING-STRATEGY.md](./BRANCHING-STRATEGY.md) for complete workflow
 
 ---
 

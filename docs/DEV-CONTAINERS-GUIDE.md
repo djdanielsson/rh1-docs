@@ -5,10 +5,13 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Choosing Your Development Environment](#choosing-your-development-environment)
+- [Ansible Development Tools (ADT)](#ansible-development-tools-adt)
 - [Technologies](#technologies)
 - [Getting Started](#getting-started)
 - [Repository-Specific Containers](#repository-specific-containers)
 - [OpenShift Dev Spaces](#openshift-dev-spaces)
+- [Windows WSL Setup](#windows-wsl-setup)
 - [Troubleshooting](#troubleshooting)
 - [Best Practices](#best-practices)
 
@@ -35,6 +38,115 @@ Each repository has:
 
 ---
 
+## Choosing Your Development Environment
+
+### Decision Matrix
+
+| Environment | Best For | Pros | Cons |
+|-------------|----------|------|------|
+| **Local (IDE)** | Individual developers, offline work | Full control, fast, offline capable | Setup complexity, inconsistent environments |
+| **VS Code Dev Containers** | Team consistency, containerized workflow | Consistent, isolated, easy setup | Requires Docker/Podman |
+| **OpenShift Dev Spaces** | Remote work, centralized management | No local setup, accessible anywhere | Requires network, may have latency |
+| **Ansible Development Tools (ADT)** | Ansible content creators | Purpose-built for Ansible, integrated testing | Command-line focused |
+
+### Recommendation by Role
+
+- **Platform Engineers**: VS Code Dev Containers or OpenShift Dev Spaces
+- **Ansible Content Developers**: Local IDE with Ansible VS Code extension + ADT
+- **DevOps Engineers**: VS Code Dev Containers (cluster-config repo)
+- **Windows Developers**: WSL + VS Code Dev Containers
+
+---
+
+## Ansible Development Tools (ADT)
+
+### What is ADT?
+
+**Ansible Development Tools (ADT)** is a command-line tool for Ansible content creators that provides:
+- Scaffolding for collections, roles, and plugins
+- Integrated testing (ansible-lint, molecule, ansible-test)
+- Development server with live preview
+- Built-in best practices
+
+**Installation**:
+```bash
+# Via pip (recommended)
+pip install ansible-dev-tools
+
+# Via dnf (Fedora/RHEL)
+dnf install ansible-dev-tools
+
+# Verify installation
+adt --version
+```
+
+### Key ADT Commands
+
+```bash
+# Create a new collection
+adt collection init myorg.mycollection
+
+# Create a new role within a collection
+cd myorg/mycollection
+adt role init my_role
+
+# Create a plugin
+adt plugin init filter my_filter
+
+# Run tests
+adt test sanity
+adt test units
+adt test integration
+
+# Start development server
+adt server
+```
+
+### ADT Integrated Tools
+
+ADT includes and configures:
+- `ansible-creator`: Scaffolding tool
+- `ansible-lint`: Linting tool
+- `ansible-test`: Testing framework
+- `molecule`: Role testing
+- `tox`: Test automation
+- `pytest`: Python unit tests
+
+### Using ADT in This Platform
+
+```bash
+# Navigate to collection
+cd automation-collection-example
+
+# Create a new role with ADT
+adt role init monitoring --type container
+
+# Run comprehensive tests
+adt test all
+
+# Lint your changes
+adt lint
+
+# Generate documentation
+adt doc
+```
+
+### ADT vs ansible-creator
+
+**Note**: In this platform, we primarily use `ansible-creator` directly (which is part of ADT). ADT provides additional workflow integration.
+
+```bash
+# Using ansible-creator directly (our current approach)
+ansible-creator add resource role webserver .
+
+# Using ADT (alternative, more integrated)
+adt role init webserver
+```
+
+**Reference**: [Ansible Development Tools Documentation](https://ansible.readthedocs.io/projects/dev-tools/)
+
+---
+
 ## Technologies
 
 ### VS Code Dev Containers
@@ -44,12 +156,66 @@ Each repository has:
 - Full IDE integration
 - Extension marketplace support
 
+**Recommended Extensions**:
+- **Ansible** (Red Hat) - Official Ansible language support
+- **YAML** - YAML language support with schema validation
+- **Python** - Python language support
+- **Git Lens** - Enhanced Git capabilities
+- **Docker** - Docker container management
+
+### Ansible VS Code Extension
+
+**Official Extension**: `redhat.ansible`
+
+**Features**:
+- Ansible syntax highlighting
+- IntelliSense for modules, keywords, and variables
+- Integrated ansible-lint
+- Ansible Navigator integration
+- Execution Environment support
+- Playbook and role scaffolding
+- Hover documentation for modules
+
+**Installation**:
+```bash
+# In VS Code
+1. Open Extensions (Ctrl+Shift+X)
+2. Search for "Ansible" by Red Hat
+3. Click Install
+
+# Or via command line
+code --install-extension redhat.ansible
+```
+
+**Configuration**:
+```json
+// .vscode/settings.json
+{
+  "ansible.ansible.path": "/usr/bin/ansible",
+  "ansible.python.interpreterPath": "/usr/bin/python3",
+  "ansible.validation.enabled": true,
+  "ansible.validation.lint.enabled": true,
+  "ansible.validation.lint.path": "/usr/bin/ansible-lint",
+  "ansible.executionEnvironment.enabled": true,
+  "ansible.executionEnvironment.image": "quay.io/ansible/creator-ee:latest"
+}
+```
+
+**Key Features in Use**:
+- **Ctrl+Space**: Module autocomplete
+- **F12**: Go to definition (roles, vars)
+- **Shift+F12**: Find all references
+- **Ctrl+Hover**: Module documentation
+
+**Reference**: [Ansible VS Code Extension Documentation](https://marketplace.visualstudio.com/items?itemName=redhat.ansible)
+
 ### OpenShift Dev Spaces
 
 - Cloud-based development environment
 - Kubernetes-native
-- Browser-based VS Code
+- Browser-based VS Code (Eclipse Theia/Code-OSS)
 - Team collaboration features
+- Pre-configured workspaces
 
 ---
 
@@ -354,6 +520,259 @@ components:
     volume:
       size: 5Gi
 ```
+
+---
+
+## Windows WSL Setup
+
+### Why WSL for Windows Developers?
+
+**Windows Subsystem for Linux (WSL)** provides a native Linux environment on Windows, essential for:
+- Running Ansible (not natively supported on Windows)
+- Using Dev Containers seamlessly
+- Consistent tooling with Linux/macOS developers
+- Better performance than traditional VMs
+
+### Installing WSL 2
+
+**Requirements**:
+- Windows 10 version 2004+ or Windows 11
+- Administrator access
+
+**Installation**:
+```powershell
+# PowerShell (as Administrator)
+
+# Install WSL with Ubuntu (default)
+wsl --install
+
+# Or specify distribution
+wsl --install -d Ubuntu-22.04
+
+# Restart computer
+```
+
+**Verify Installation**:
+```bash
+# In PowerShell
+wsl --list --verbose
+
+# Expected output:
+#   NAME            STATE           VERSION
+# * Ubuntu-22.04    Running         2
+```
+
+### Setting Up Development Environment in WSL
+
+```bash
+# Launch WSL
+wsl
+
+# Update packages
+sudo apt update && sudo apt upgrade -y
+
+# Install essential tools
+sudo apt install -y \
+  git \
+  python3 \
+  python3-pip \
+  python3-venv \
+  build-essential \
+  curl \
+  wget
+
+# Install Docker (for Dev Containers)
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Add user to docker group
+sudo usermod -aG docker $USER
+
+# Restart WSL
+exit
+wsl --shutdown
+wsl
+
+# Verify Docker
+docker --version
+docker run hello-world
+```
+
+### Installing VS Code for WSL
+
+```bash
+# Download VS Code for Windows from https://code.visualstudio.com/
+
+# Install WSL extension in VS Code
+1. Open VS Code
+2. Install "Remote - WSL" extension (ms-vscode-remote.remote-wsl)
+3. Install "Dev Containers" extension (ms-vscode-remote.remote-containers)
+```
+
+### Opening Project in WSL
+
+```bash
+# Method 1: From WSL terminal
+cd /path/to/repo
+code .
+
+# Method 2: From VS Code
+1. Press Ctrl+Shift+P
+2. Type "WSL: Connect to WSL"
+3. Open folder in WSL
+
+# Method 3: From Windows Explorer
+Right-click folder → "Open with Code" (opens in WSL automatically)
+```
+
+### File System Considerations
+
+**Important**: Always work within the WSL file system (`/home/`), not Windows (`/mnt/c/`).
+
+```bash
+# ✅ GOOD: WSL native file system (fast)
+cd /home/username/projects/rh1_ansible_code_lifecycle
+
+# ❌ BAD: Windows file system via mount (slow)
+cd /mnt/c/Users/username/projects/rh1_ansible_code_lifecycle
+```
+
+**Why**: WSL 2 uses a virtual file system. Accessing Windows files from WSL incurs significant performance overhead.
+
+### Cloning Repositories in WSL
+
+```bash
+# In WSL terminal
+cd ~
+mkdir projects
+cd projects
+
+# Clone via SSH (recommended)
+git clone git@github.com:org/rh1_ansible_code_lifecycle.git
+
+# Or via HTTPS
+git clone https://github.com/org/rh1_ansible_code_lifecycle.git
+
+# Open in VS Code
+cd rh1_ansible_code_lifecycle
+code .
+```
+
+### Using Dev Containers in WSL
+
+```bash
+# 1. Open repo in VS Code (from WSL)
+cd ~/projects/rh1_ansible_code_lifecycle/automation-collection-example
+code .
+
+# 2. VS Code will detect .devcontainer/
+# 3. Click "Reopen in Container" notification
+#    OR
+#    Press Ctrl+Shift+P → "Dev Containers: Reopen in Container"
+
+# Container builds and starts automatically
+```
+
+### Configuring Git in WSL
+
+```bash
+# Set up Git identity
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# Use SSH keys from Windows (optional)
+# Copy SSH keys from Windows to WSL
+cp -r /mnt/c/Users/YourUsername/.ssh ~/.ssh
+chmod 600 ~/.ssh/id_rsa
+chmod 644 ~/.ssh/id_rsa.pub
+
+# Or generate new keys in WSL
+ssh-keygen -t ed25519 -C "your.email@example.com"
+```
+
+### Performance Tips for WSL
+
+1. **Store projects in WSL file system** (`/home/`), not `/mnt/c/`
+2. **Use WSL 2** (not WSL 1) - much faster
+3. **Allocate enough resources** (`.wslconfig`):
+
+```ini
+# C:\Users\YourUsername\.wslconfig
+[wsl2]
+memory=8GB
+processors=4
+swap=2GB
+```
+
+4. **Disable Windows Defender scanning** for WSL directories:
+   - Open Windows Security
+   - Virus & threat protection settings
+   - Add exclusion: `C:\Users\YourUsername\AppData\Local\Packages\CanonicalGroupLimited.*`
+
+### Common WSL Commands
+
+```bash
+# From PowerShell
+
+# List distributions
+wsl --list --verbose
+
+# Set default distribution
+wsl --set-default Ubuntu-22.04
+
+# Shutdown WSL
+wsl --shutdown
+
+# Update WSL
+wsl --update
+
+# Check WSL version
+wsl --version
+
+# Export distribution (backup)
+wsl --export Ubuntu-22.04 ubuntu-backup.tar
+
+# Import distribution (restore)
+wsl --import Ubuntu-22.04 C:\WSL\Ubuntu ubuntu-backup.tar
+```
+
+### Troubleshooting WSL
+
+**Issue**: Docker not starting
+
+**Solution**:
+```bash
+# Check Docker daemon
+sudo service docker status
+
+# Start Docker
+sudo service docker start
+
+# Enable Docker on boot
+echo "sudo service docker start" >> ~/.bashrc
+```
+
+**Issue**: "Cannot connect to Docker daemon"
+
+**Solution**:
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+
+# Restart WSL
+exit
+wsl --shutdown
+wsl
+```
+
+**Issue**: Slow file access
+
+**Solution**: Ensure you're working in `/home/`, not `/mnt/c/`.
+
+**Reference**:
+- [Official WSL Documentation](https://docs.microsoft.com/en-us/windows/wsl/)
+- [VS Code Remote - WSL](https://code.visualstudio.com/docs/remote/wsl)
+- [Docker Desktop for Windows with WSL 2](https://docs.docker.com/desktop/windows/wsl/)
 
 ---
 

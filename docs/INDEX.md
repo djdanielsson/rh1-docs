@@ -51,11 +51,13 @@
 | [Testing Guide](./TESTING-GUIDE.md) | Testing strategies & practices | Developers, QA |
 | [Validation & Quality Guide](./VALIDATION-QUALITY-GUIDE.md) | Validation & security scanning | Developers, DevOps |
 
-### 🔄 CI/CD
+### 🔄 CI/CD & Release Management
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [CI/CD Guide](./CICD-GUIDE.md) | Complete workflow documentation | DevOps, developers |
+| [Branching Strategy](./BRANCHING-STRATEGY.md) | Trunk-based dev with Git tags | All developers, release managers |
+| [EE Versioning Strategy](./EE-VERSIONING-STRATEGY.md) | Execution Environment version locking | DevOps, release managers |
 
 ### 📖 Governance
 
@@ -141,6 +143,8 @@ rh1_ansible_code_lifecycle/
 │   │
 │   ├── PRE-COMMIT-GUIDE.md               # Pre-commit hooks (consolidated)
 │   ├── CICD-GUIDE.md                     # CI/CD workflows (with quick start)
+│   ├── BRANCHING-STRATEGY.md             # Git workflow (trunk-based + tags)
+│   ├── EE-VERSIONING-STRATEGY.md         # Execution Environment version locking
 │   ├── TESTING-GUIDE.md                  # Testing strategies
 │   │
 │   ├── ANSIBLE-BEST-PRACTICES.md         # Ansible practices ⭐
@@ -156,13 +160,13 @@ rh1_ansible_code_lifecycle/
 
 ## 📊 Documentation Statistics
 
-- **Core Documents**: 10 files
+- **Core Documents**: 12 files
 - **Diagram Documents**: 5 files (39 diagrams)
-- **Total Lines**: ~23,000 lines
-- **Code Examples**: 200+
-- **Diagrams**: 39 Mermaid.js diagrams
-- **External References**: 25+
-- **Internal Cross-refs**: 75+
+- **Total Lines**: ~27,000 lines
+- **Code Examples**: 250+
+- **Diagrams**: 40+ Mermaid.js diagrams
+- **External References**: 30+
+- **Internal Cross-refs**: 85+
 
 ---
 
