@@ -1,0 +1,171 @@
+---
+# Validation playbook for aap-config-as-code repository
+# Tests AAP configuration structure and content
+- name: Validate AAP Configuration
+  hosts: localhost
+  gather_facts: false
+  vars:
+    aap_config_path: "{{ playbook_dir }}/../../aap-config-as-code"
+
+  tasks:
+    - name: Check aap-config-as-code directory exists
+      ansible.builtin.stat:
+        path: "{{ aap_config_path }}"
+      register: aap_dir
+
+    - name: Fail if directory doesn't exist
+      ansible.builtin.fail:
+        msg: "aap-config-as-code directory not found"
+      when: not aap_dir.stat.exists
+
+    - name: Check required files exist
+      ansible.builtin.stat:
+        path: "{{ aap_config_path }}/{{ item }}"
+      loop:
+        - playbook.yml
+        - inventory.yml
+        - collections/requirements.yml
+      register: required_files
+
+    - name: Verify all required files exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Required file missing: {{ item.item }}"
+      loop: "{{ required_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Check required group_vars directories
+      ansible.builtin.stat:
+        path: "{{ aap_config_path }}/group_vars/{{ item }}"
+      loop:
+        - all
+        - aap_dev
+        - aap_qa
+        - aap_prod
+      register: group_vars_dirs
+
+    - name: Verify all group_vars directories exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+        fail_msg: "Required group_vars directory missing: {{ item.item }}"
+      loop: "{{ group_vars_dirs.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Find all group_vars YAML files
+      ansible.builtin.find:
+        paths: "{{ aap_config_path }}/group_vars"
+        patterns: "*.yml,*.yaml"
+        recurse: true
+      register: group_vars_files
+
+    - name: Validate YAML syntax in group_vars
+      ansible.builtin.command:
+        cmd: "python3 -c 'import yaml; yaml.safe_load(open(\"{{ item.path }}\"))'"
+      loop: "{{ group_vars_files.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      changed_when: false
+
+    - name: Check for plain passwords in group_vars
+      ansible.builtin.shell: |
+        if grep -E 'password:\s*["\']?[^{]' "{{ item.path }}" | grep -v '{{ ' | grep -v '^#' | grep -v '_name:' | grep -v 'secretRef'; then
+          echo "❌ Plain password found in {{ item.path | basename }}"
+          exit 1
+        fi
+      args:
+        executable: /bin/bash
+      loop: "{{ group_vars_files.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      changed_when: false
+      failed_when: false
+      register: password_check
+
+    - name: Validate inventory file
+      ansible.builtin.command:
+        cmd: "ansible-inventory -i {{ aap_config_path }}/inventory.yml --list"
+      changed_when: false
+      register: inventory_output
+
+    - name: Parse inventory
+      ansible.builtin.set_fact:
+        inventory_data: "{{ inventory_output.stdout | from_json }}"
+
+    - name: Check for required inventory groups
+      ansible.builtin.assert:
+        that:
+          - "'aap_dev' in inventory_data.keys() or 'aap_dev' in (inventory_data._meta.hostvars.keys() | default([]))"
+          - "'aap_qa' in inventory_data.keys() or 'aap_qa' in (inventory_data._meta.hostvars.keys() | default([]))"
+          - "'aap_prod' in inventory_data.keys() or 'aap_prod' in (inventory_data._meta.hostvars.keys() | default([]))"
+        fail_msg: "Missing required inventory groups"
+        success_msg: "All required inventory groups present"
+
+    - name: Check playbook syntax
+      ansible.builtin.command:
+        cmd: "ansible-playbook --syntax-check {{ aap_config_path }}/playbook.yml"
+      changed_when: false
+
+    - name: Validate AAP config file naming
+      ansible.builtin.shell: |
+        valid_files=(
+          "credentials.yml"
+          "execution_environments.yml"
+          "hosts.yml"
+          "inventories.yml"
+          "job_templates.yml"
+          "projects.yml"
+          "schedules.yml"
+          "settings.yml"
+          "workflow_templates.yml"
+          "notifications.yml"
+          "organizations.yml"
+          "teams.yml"
+          "labels.yml"
+          "credential_types.yml"
+        )
+        
+        for file in "{{ item.path }}"; do
+          basename=$(basename "$file")
+          if [[ ! " ${valid_files[@]} " =~ " ${basename} " ]]; then
+            echo "⚠️  WARNING: Unexpected config file: $basename"
+          fi
+        done
+      args:
+        executable: /bin/bash
+      loop: "{{ group_vars_files.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      when: item.path is search('aap_(dev|qa|prod)')
+      changed_when: false
+      failed_when: false
+
+    - name: Check for test data in production
+      ansible.builtin.shell: |
+        if grep -ri 'test\|demo\|example' "{{ aap_config_path }}/group_vars/aap_prod/"; then
+          echo "⚠️  WARNING: Test/demo references found in production config"
+        fi
+      args:
+        executable: /bin/bash
+      changed_when: false
+      failed_when: false
+      register: prod_test_check
+
+    - name: Validation summary
+      ansible.builtin.debug:
+        msg: |
+          ✅ AAP Configuration Validation Complete
+          
+          Files validated: {{ group_vars_files.files | length }}
+          YAML syntax: ✅ All valid
+          Inventory: ✅ Valid
+          Playbook syntax: ✅ Valid
+          Plain passwords: {{ 'none found' if (password_check.results | selectattr('rc', 'equalto', 1) | list | length == 0) else 'issues found' }}
+          Production config: {{ 'clean' if prod_test_check.rc == 0 else 'has warnings' }}
+
+
+

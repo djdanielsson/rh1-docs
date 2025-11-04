@@ -1,0 +1,41 @@
+---
+# Mock AAP inventory for testing
+# This is used for local testing without actual AAP instances
+all:
+  children:
+    aap_dev:
+      hosts:
+        aap-dev-mock:
+          ansible_host: localhost
+          ansible_connection: local
+          controller_host: "http://localhost:8080"
+          controller_username: "admin"
+          controller_password: "{{ lookup('env', 'AAP_DEV_PASSWORD') | default('password', true) }}"
+          controller_verify_ssl: false
+          
+    aap_qa:
+      hosts:
+        aap-qa-mock:
+          ansible_host: localhost
+          ansible_connection: local
+          controller_host: "http://localhost:8081"
+          controller_username: "admin"
+          controller_password: "{{ lookup('env', 'AAP_QA_PASSWORD') | default('password', true) }}"
+          controller_verify_ssl: false
+          
+    aap_prod:
+      hosts:
+        aap-prod-mock:
+          ansible_host: localhost
+          ansible_connection: local
+          controller_host: "http://localhost:8082"
+          controller_username: "admin"
+          controller_password: "{{ lookup('env', 'AAP_PROD_PASSWORD') | default('password', true) }}"
+          controller_verify_ssl: false
+
+  vars:
+    # Common variables for all AAP instances
+    ansible_python_interpreter: /usr/bin/python3
+
+
+

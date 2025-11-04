@@ -1,0 +1,213 @@
+name: SBOM Generation and Vulnerability Scanning
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'automation-ee-example/**'
+      - 'automation-collection-example/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'automation-ee-example/**'
+      - 'automation-collection-example/**'
+  schedule:
+    # Run weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Image name to scan (optional)'
+        required: false
+        type: string
+
+# Constitutional Article V: Zero-Trust Security
+# Automated SBOM generation and vulnerability scanning
+
+jobs:
+  generate-sbom-ee:
+    name: Generate SBOM for Execution Environment
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, 'automation-ee') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Execution Environment
+        working-directory: automation-ee-example
+        run: |
+          pip install ansible-builder
+          ansible-builder build -t test-ee:latest
+      
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+      
+      - name: Generate SBOM (SPDX)
+        run: |
+          syft test-ee:latest -o spdx-json > sbom-ee-spdx.json
+      
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          syft test-ee:latest -o cyclonedx-json > sbom-ee-cyclonedx.json
+      
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-execution-environment
+          path: |
+            sbom-ee-*.json
+          retention-days: 90
+      
+      - name: Install Grype
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+      
+      - name: Scan for vulnerabilities
+        id: scan
+        run: |
+          grype test-ee:latest -o json > vulnerability-report-ee.json
+          grype test-ee:latest -o sarif > vulnerability-report-ee.sarif
+          grype test-ee:latest -o table
+      
+      - name: Upload vulnerability report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vulnerability-report-ee
+          path: |
+            vulnerability-report-ee.*
+          retention-days: 90
+      
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: vulnerability-report-ee.sarif
+          category: execution-environment
+      
+      - name: Check vulnerability threshold
+        run: |
+          CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' vulnerability-report-ee.json)
+          HIGH=$(jq '[.matches[] | select(.vulnerability.severity == "High")] | length' vulnerability-report-ee.json)
+          
+          echo "Critical vulnerabilities: $CRITICAL"
+          echo "High vulnerabilities: $HIGH"
+          
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::Found $CRITICAL critical vulnerabilities"
+            exit 1
+          fi
+          
+          if [ "$HIGH" -gt 5 ]; then
+            echo "::warning::Found $HIGH high vulnerabilities (threshold: 5)"
+          fi
+
+  generate-sbom-collection:
+    name: Generate SBOM for Collection
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, 'automation-collection') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        working-directory: automation-collection-example
+        run: |
+          pip install -r requirements.txt -r test-requirements.txt
+      
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+      
+      - name: Generate Python SBOM
+        working-directory: automation-collection-example
+        run: |
+          syft dir:. -o spdx-json > ../sbom-collection-spdx.json
+          syft dir:. -o cyclonedx-json > ../sbom-collection-cyclonedx.json
+      
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-collection
+          path: |
+            sbom-collection-*.json
+          retention-days: 90
+      
+      - name: Install Grype
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+      
+      - name: Scan Python dependencies
+        working-directory: automation-collection-example
+        run: |
+          grype dir:. -o json > ../vulnerability-report-collection.json
+          grype dir:. -o sarif > ../vulnerability-report-collection.sarif
+          grype dir:. -o table
+      
+      - name: Upload vulnerability report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vulnerability-report-collection
+          path: |
+            vulnerability-report-collection.*
+          retention-days: 90
+      
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: vulnerability-report-collection.sarif
+          category: ansible-collection
+      
+      - name: Check vulnerability threshold
+        run: |
+          CRITICAL=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' vulnerability-report-collection.json)
+          HIGH=$(jq '[.matches[] | select(.vulnerability.severity == "High")] | length' vulnerability-report-collection.json)
+          
+          echo "Critical vulnerabilities: $CRITICAL"
+          echo "High vulnerabilities: $HIGH"
+          
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::Found $CRITICAL critical vulnerabilities"
+            exit 1
+          fi
+          
+          if [ "$HIGH" -gt 5 ]; then
+            echo "::warning::Found $HIGH high vulnerabilities (threshold: 5)"
+          fi
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: true
+
