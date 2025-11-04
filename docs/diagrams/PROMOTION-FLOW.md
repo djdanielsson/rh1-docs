@@ -2,6 +2,55 @@
 
 **Atomic Promotion with Release Manifests**
 
+---
+
+## 🔧 Tool Responsibilities (Constitutional Article II: Separation of Duties)
+
+### ArgoCD (Platform Loop)
+
+**Manages**: Kubernetes/OpenShift platform resources
+
+**Responsibilities**:
+- ✅ AAP Operator installation and versioning
+- ✅ Tekton Operators
+- ✅ Namespaces, RBAC, ServiceAccounts
+- ✅ CRDs (Custom Resource Definitions)
+- ✅ Platform-level configuration
+
+**Repository**: `cluster-config`
+
+**What ArgoCD DOES NOT Do**:
+- ❌ AAP Configuration (Projects, Job Templates, Inventories)
+- ❌ Application-level automation
+- ❌ Promotion orchestration
+
+---
+
+### Tekton (Application Loop)
+
+**Manages**: Application-level automation and AAP configuration
+
+**Responsibilities**:
+- ✅ Build Execution Environments
+- ✅ Apply AAP Configuration (via `infra.aap_configuration`)
+- ✅ Create Release Manifests
+- ✅ Orchestrate promotions (Dev → QA → Prod)
+- ✅ Run tests and validations
+
+**Repository**: All automation repos (collections, EE, aap-config-as-code)
+
+**How Tekton Applies AAP Config**:
+```bash
+# Tekton runs Ansible playbook with infra.aap_configuration collection
+ansible-playbook aap-config-as-code/playbook.yml \
+  -i inventory.yml \
+  -l aap_dev \
+  -e controller_hostname=$AAP_HOST \
+  -e controller_oauthtoken=$AAP_TOKEN
+```
+
+---
+
 ## Promotion Overview
 
 ```mermaid
@@ -206,7 +255,6 @@ sequenceDiagram
     participant GH as GitHub
     participant Tek as Tekton
     participant Reg as Registry
-    participant Argo as ArgoCD
     participant AAP_D as AAP Dev
 
     Dev->>GH: Merge PR to main
@@ -216,15 +264,16 @@ sequenceDiagram
     Tek->>Tek: Build EE image
     Tek->>Tek: Run tests
     Tek->>Reg: Publish artifacts
-    Tek->>GH: Create manifest (dev-$SHA)
+    Tek->>Tek: Create dev tag (dev-$SHA)
     
-    GH->>Argo: Detect manifest change
-    Argo->>AAP_D: Deploy configuration
-    AAP_D->>AAP_D: Pull artifacts from registry
-    AAP_D-->>Argo: Report health
-    Argo-->>Dev: Deployment complete
+    Tek->>AAP_D: Apply AAP config<br/>(via infra.aap_configuration)
+    AAP_D->>AAP_D: Sync Project to dev tag
+    AAP_D->>Reg: Pull EE image
+    AAP_D-->>Tek: Config applied
+    Tek-->>Dev: Deployment complete
 
-    Note over Dev,AAP_D: Automatic on merge
+    Note over Dev,AAP_D: Tekton orchestrates, not ArgoCD
+    Note over Tek,AAP_D: ArgoCD manages AAP operator only
 ```
 
 ### 2. QA Promotion
@@ -234,28 +283,28 @@ sequenceDiagram
     participant QA_Lead as QA Lead
     participant GH as GitHub
     participant Tek as Tekton
-    participant Argo as ArgoCD
     participant AAP_Q as AAP QA
 
-    QA_Lead->>GH: Request promotion (dev → qa)
-    GH->>Tek: Trigger promotion pipeline
+    QA_Lead->>GH: Create QA tag (qa-v1.1.0)
+    GH->>Tek: Tag trigger → promotion pipeline
     
-    Tek->>Tek: Validate dev manifest
+    Tek->>Tek: Build EE (ee:qa-v1.1.0)
     Tek->>Tek: Create QA manifest
     Tek->>GH: Commit QA manifest
     
-    GH->>Argo: Detect manifest change
-    Argo->>AAP_Q: Deploy configuration
-    AAP_Q->>AAP_Q: Pull artifacts
+    Tek->>AAP_Q: Apply AAP config<br/>(via infra.aap_configuration)
+    AAP_Q->>AAP_Q: Sync Project to qa-v1.1.0
+    AAP_Q->>AAP_Q: Pull EE ee:qa-v1.1.0
     AAP_Q->>AAP_Q: Run smoke tests
-    AAP_Q-->>Argo: Report health
-    Argo-->>QA_Lead: Deployment complete
+    AAP_Q-->>Tek: Config applied
+    Tek-->>QA_Lead: QA deployment complete
     
-    QA_Lead->>AAP_Q: Execute test suite
+    QA_Lead->>AAP_Q: Execute full test suite
     AAP_Q-->>QA_Lead: Test results
-    QA_Lead->>GH: Sign-off (approve PR)
+    QA_Lead->>GH: Sign-off (approve for prod)
 
-    Note over QA_Lead,AAP_Q: Manual trigger + validation
+    Note over Tek,AAP_Q: Tekton applies AAP config
+    Note over GH: ArgoCD manages AAP operator/platform only
 ```
 
 ### 3. Production Promotion
@@ -265,29 +314,28 @@ sequenceDiagram
     participant CAB as Change Advisory Board
     participant GH as GitHub
     participant Tek as Tekton
-    participant Argo as ArgoCD
     participant AAP_P as AAP Prod
     participant Backup as Backup Service
 
-    CAB->>GH: Approve promotion (qa → prod)
-    GH->>Tek: Trigger production pipeline
+    CAB->>GH: Approve prod tag (prod-v1.0.0)
+    GH->>Tek: Tag trigger → prod pipeline
     
     Tek->>Tek: Validate QA manifest
+    Tek->>Tek: Build EE (ee:prod-v1.0.0)
     Tek->>Backup: Create backup/snapshot
     Backup-->>Tek: Backup ID
     Tek->>Tek: Create prod manifest
     Tek->>GH: Commit prod manifest
     
-    GH->>Argo: Detect manifest change
-    Argo->>AAP_P: Deploy configuration (blue-green)
-    AAP_P->>AAP_P: Pull artifacts
+    Tek->>AAP_P: Apply AAP config<br/>(via infra.aap_configuration)
+    AAP_P->>AAP_P: Sync Project to prod-v1.0.0
+    AAP_P->>AAP_P: Pull EE ee:prod-v1.0.0
     AAP_P->>AAP_P: Health checks
-    AAP_P-->>Argo: Green environment healthy
-    Argo->>AAP_P: Switch traffic to green
-    AAP_P-->>Argo: Deployment complete
-    Argo-->>CAB: Production deployed
+    AAP_P-->>Tek: Config applied
+    Tek-->>CAB: Production deployed
 
-    Note over CAB,AAP_P: Approval + backup + verification
+    Note over Tek,AAP_P: Tekton orchestrates deployment
+    Note over GH: ArgoCD manages AAP operator only
 ```
 
 ---
@@ -319,22 +367,20 @@ sequenceDiagram
     participant Ops as Operations
     participant GH as GitHub
     participant Tek as Tekton
-    participant Argo as ArgoCD
     participant AAP as AAP Instance
 
     Ops->>GH: Trigger rollback pipeline
     GH->>Tek: Start rollback job
     
     Tek->>Tek: Identify previous manifest
-    Tek->>GH: Revert to previous manifest
-    
-    GH->>Argo: Detect change
-    Argo->>AAP: Deploy previous version
-    AAP->>AAP: Pull previous artifacts
-    AAP-->>Argo: Rollback complete
-    Argo-->>Ops: Previous version restored
+    Tek->>AAP: Apply previous AAP config<br/>(via infra.aap_configuration)
+    AAP->>AAP: Sync Project to previous tag
+    AAP->>AAP: Pull previous EE image
+    AAP-->>Tek: Rollback complete
+    Tek-->>Ops: Previous version restored
 
-    Note over Ops,AAP: Fast rollback via manifest revert
+    Note over Tek,AAP: Tekton applies previous config
+    Note over GH: ArgoCD not involved in AAP config
 ```
 
 ---
@@ -503,15 +549,15 @@ gantt
 ```mermaid
 stateDiagram-v2
     [*] --> Created: Tekton build
-    Created --> DevDeployed: ArgoCD sync
+    Created --> DevDeployed: Tekton applies config
     DevDeployed --> DevValidated: Tests pass
-    DevValidated --> QAPromoted: Manual trigger
-    QAPromoted --> QADeployed: ArgoCD sync
+    DevValidated --> QAPromoted: Git tag created
+    QAPromoted --> QADeployed: Tekton applies config
     QADeployed --> QAValidated: Tests pass
     QAValidated --> CABReview: Submit for approval
     CABReview --> ProdPromoted: Approved
     CABReview --> QAValidated: Rejected
-    ProdPromoted --> ProdDeployed: ArgoCD sync
+    ProdPromoted --> ProdDeployed: Tekton applies config
     ProdDeployed --> ProdActive: Verification pass
     ProdActive --> [*]: Superseded by new release
 
@@ -521,6 +567,17 @@ stateDiagram-v2
         - EE image digest
         - AAP config commit
         - Build metadata
+    end note
+
+    note right of DevDeployed
+        Tekton orchestrates:
+        - Apply AAP config (CaC)
+        - Sync AAP Projects
+        - Update Job Templates
+        
+        ArgoCD manages:
+        - AAP operator
+        - Platform resources
     end note
 
     note right of CABReview
