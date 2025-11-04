@@ -1,17 +1,60 @@
 
 
-# CI/CD Guide - Cloud-Native Ansible Lifecycle Platform
+# CI/CD Guide
 
-Comprehensive guide to Continuous Integration and Continuous Deployment for all repositories in the platform.
+**Comprehensive guide to CI/CD workflows across all repositories**
 
-## Table of Contents
+---
 
-- [Overview](#overview)
-- [Workflow Matrix](#workflow-matrix)
-- [Repository-Specific Workflows](#repository-specific-workflows)
-- [Secrets Management](#secrets-management)
-- [Badge Configuration](#badge-configuration)
-- [Troubleshooting](#troubleshooting)
+## 🚀 Quick Start
+
+### Overview
+
+- **25 workflows** across 5 repositories
+- **GitHub Actions** for testing & linting (quality gates)
+- **Tekton Pipelines** for building & releasing (handled on cluster)
+- **Average PR validation**: <5 minutes
+
+### What Runs Where
+
+**GitHub Actions** (Testing Only):
+- ✅ Pre-commit validation
+- ✅ Linting (ansible-lint, yamllint, Python)
+- ✅ Testing (sanity, units, integration, Molecule)
+- ✅ Security scanning (secrets, vulnerabilities)
+- ✅ PR validation and auto-labeling
+
+**Tekton Pipelines** (Building & Releasing):
+- 🏗️ Build collections
+- 🐳 Build execution environments
+- 📦 Create release manifests
+- 🚀 Publish to registries (Galaxy, Quay.io)
+- ⬆️ Promote between environments
+
+### Key Workflows Per Repository
+
+| Repository | Workflows | Key Actions |
+|------------|-----------|-------------|
+| **cluster-config** | 5 | Kubernetes validation, ArgoCD checks, Tekton validation |
+| **aap-config-as-code** | 5 | Ansible-lint, playbook syntax, idempotency |
+| **automation-collection** | 5 | Sanity tests, unit tests, integration tests, Molecule |
+| **automation-ee** | 4 | EE validation, SBOM generation, security scanning |
+| **automation-release-manifest** | 3 | Manifest validation, semver checks |
+
+### Quick Commands
+
+```bash
+# Manually trigger workflow
+gh workflow run <workflow-name>
+
+# Check workflow status
+gh run list --workflow=<workflow-name>
+
+# View workflow logs
+gh run view <run-id> --log
+```
+
+---
 
 ## Overview
 

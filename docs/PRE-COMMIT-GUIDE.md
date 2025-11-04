@@ -1,8 +1,12 @@
-# Pre-commit Hooks Quick Reference
+# Pre-commit Hooks Guide
 
-Quick reference guide for pre-commit hooks across all repositories.
+**Complete guide to pre-commit hooks across all repositories**
 
-## Quick Commands
+---
+
+## 🚀 Quick Start
+
+###Quick Commands
 
 ```bash
 # Install in current repo
@@ -21,6 +25,128 @@ pre-commit autoupdate
 git commit --no-verify
 ```
 
+### Useful Aliases
+
+Add to your `.bashrc` or `.zshrc`:
+
+```bash
+# Pre-commit aliases
+alias pc='pre-commit run --all-files'
+alias pci='pre-commit install'
+alias pcu='pre-commit autoupdate'
+alias pcr='pre-commit run'
+
+# Git with pre-commit
+alias gpc='git add -A && pre-commit run'
+```
+
+---
+
+## Overview
+
+Pre-commit hooks enforce code quality, security, and constitutional compliance **before** code is committed to Git.
+
+### Benefits
+
+- ✅ **No secrets in Git** (Article V)
+- ✅ **Code quality** (Article IV)
+- ✅ **Consistent formatting** (Article IV)
+- ✅ **Security scanning** (Article V)
+- ✅ **Syntax validation** (Article IV)
+
+### Repository-Specific Checks
+
+| Repository | Key Checks |
+|------------|------------|
+| **cluster-config** | Kubernetes YAML, ArgoCD apps, Tekton pipelines, no secrets, RBAC checks |
+| **aap-config-as-code** | Ansible syntax, idempotency, no plain secrets, naming conventions |
+| **automation-collection** | Python linting, Ansible lint, module docs, Molecule tests |
+| **automation-ee** | EE structure, version pinning, no latest tags, bindep validation |
+| **automation-release-manifest** | Manifest structure, commit SHAs, image digests, semver |
+
+---
+
+## Installation
+
+### 1. Install Pre-commit Framework
+
+```bash
+# Using pip (recommended)
+pip install pre-commit
+
+# Or using homebrew (macOS)
+brew install pre-commit
+
+# Verify installation
+pre-commit --version
+```
+
+### 2. Install Additional Dependencies
+
+```bash
+# YAML and Ansible tools
+pip install yamllint ansible-lint
+
+# Python code quality tools (for collection development)
+pip install black isort flake8 pylint bandit
+
+# Security scanning tools
+pip install detect-secrets
+
+# Install gitleaks (secrets scanner)
+brew install gitleaks  # macOS
+# Linux: https://github.com/gitleaks/gitleaks#installing
+```
+
+### 3. Optional Tools
+
+```bash
+# Kubernetes validation (for cluster-config)
+brew install kubeval
+
+# Tekton CLI (for cluster-config)
+brew install tektoncd-cli
+
+# Ansible builder (for automation-ee)
+pip install ansible-builder
+
+# Shell script linting
+brew install shellcheck
+```
+
+---
+
+## Repository Setup
+
+### Setup for Each Repository
+
+Run this in **each repository directory**:
+
+```bash
+# Navigate to repository
+cd cluster-config/  # or other repo
+
+# Install pre-commit hooks
+pre-commit install
+
+# Install commit-msg hook (for conventional commits)
+pre-commit install --hook-type commit-msg
+
+# Optional: Run once to verify
+pre-commit run --all-files
+```
+
+### Automated Setup Script
+
+Use the provided script to set up all repositories at once:
+
+```bash
+# From the root of the workspace
+./setup-precommit-all.sh
+```
+
+---
+
 ## Repository-Specific Hooks
 
 ### cluster-config (Platform GitOps)
@@ -34,11 +160,10 @@ git commit --no-verify
 | `kubeval` | Kubernetes resource validity | Fix invalid K8s resources |
 | `detect-secrets` | Secrets in code | Remove secrets, use K8s Secrets |
 | `gitleaks` | Leaked credentials | Remove credentials |
-| `constitution-compliance` | No plain secrets | Use secretRef/secretKeyRef |
 | `no-latest-tags` | No :latest in prod | Pin specific versions |
 | `rbac-check` | Least privilege RBAC | Reduce permissions |
 
-**Common Issues**:
+**Common Fixes**:
 ```bash
 # Fix YAML formatting
 yamllint --config-file=.yamllint . --format auto
@@ -48,6 +173,8 @@ for f in argocd/applications/*.yaml; do
   kubectl apply --dry-run=client -f $f
 done
 ```
+
+---
 
 ### aap-config-as-code (AAP Configuration)
 
@@ -60,9 +187,8 @@ done
 | `no-secrets-in-vars` | Plain secrets in vars | Use {{ lookup() }} |
 | `playbook-syntax` | Playbook syntax | Fix Ansible syntax |
 | `idempotency-check` | Task idempotency | Add creates/removes/changed_when |
-| `naming-conventions` | Valid group_vars dirs | Use all/aap_dev/aap_qa/aap_prod |
 
-**Common Issues**:
+**Common Fixes**:
 ```bash
 # Fix ansible-lint issues
 ansible-lint --fix
@@ -74,7 +200,9 @@ ansible-playbook --syntax-check playbook.yml
 ansible-inventory -i inventory.yml --list
 ```
 
-### automation-collection-example (Ansible Collection)
+---
+
+### automation-collection (Ansible Collection)
 
 **Focus**: Roles, modules, plugins, Python code
 
@@ -89,7 +217,7 @@ ansible-inventory -i inventory.yml --list
 | `module-documentation` | Module has docs | Add DOCUMENTATION, EXAMPLES, RETURN |
 | `molecule-tests` | Roles have tests | Add molecule tests |
 
-**Common Issues**:
+**Common Fixes**:
 ```bash
 # Auto-fix Python formatting
 black --line-length=100 .
@@ -98,25 +226,26 @@ isort --profile black --line-length=100 .
 # Run ansible-lint with auto-fix
 ansible-lint --fix
 
-# Check module has documentation
+# Check module documentation
 grep -A5 "DOCUMENTATION = " plugins/modules/mymodule.py
 ```
 
-### automation-ee-example (Execution Environment)
+---
+
+### automation-ee (Execution Environment)
 
 **Focus**: ansible-builder configuration
 
 | Hook | What It Checks | Fix |
 |------|---------------|-----|
 | `ee-yaml-validation` | Valid EE definition | Fix execution-environment.yml |
-| `requirements-yml-validation` | Valid requirements.yml | Add collections key |
-| `version-pinning-collections` | Pinned collection versions | Add version: "x.y.z" |
-| `version-pinning-python` | Pinned Python versions | Use package==x.y.z |
+| `requirements-validation` | Valid requirements.yml | Add collections key |
+| `version-pinning` | Pinned versions | Add version: "x.y.z" |
 | `no-latest-tags` | No :latest in base image | Use specific tag |
 | `no-manual-dockerfile` | No manual Dockerfiles | Use ansible-builder |
 | `ee-build-test` | EE builds successfully | Fix build errors |
 
-**Common Issues**:
+**Common Fixes**:
 ```bash
 # Test EE definition
 ansible-builder create --verbosity 3
@@ -127,6 +256,8 @@ ansible-builder build -t test-ee:latest
 # Validate requirements.yml
 python3 -c "import yaml; print(yaml.safe_load(open('requirements.yml')))"
 ```
+
+---
 
 ### automation-release-manifest (Release Manifests)
 
@@ -141,7 +272,7 @@ python3 -c "import yaml; print(yaml.safe_load(open('requirements.yml')))"
 | `no-latest-tags` | No latest/main in releases | Use commit SHAs |
 | `duplicate-version` | Unique versions | Change version number |
 
-**Common Issues**:
+**Common Fixes**:
 ```bash
 # Get full commit SHA
 git rev-parse HEAD
@@ -157,6 +288,8 @@ assert 'version' in m
 assert 'components' in m
 "
 ```
+
+---
 
 ## Constitutional Compliance
 
@@ -187,106 +320,9 @@ Each hook enforces constitution articles:
 - Security scanning (Bandit)
 - Least privilege RBAC
 
-## Severity Levels
+---
 
-| Symbol | Severity | Action |
-|--------|----------|--------|
-| ❌ | Blocking | Must fix before commit |
-| ⚠️ | Warning | Should fix, but can commit |
-| ℹ️ | Info | FYI only |
-
-## Emergency Procedures
-
-### Skip All Hooks (Last Resort)
-
-```bash
-# Only in emergencies!
-git commit --no-verify -m "Emergency fix"
-```
-
-⚠️ **Warning**: This bypasses all security checks!
-
-### Skip Specific Hook
-
-```bash
-# Skip one hook
-SKIP=ansible-lint git commit -m "Fix"
-
-# Skip multiple hooks
-SKIP=ansible-lint,yamllint git commit -m "Fix"
-```
-
-### Temporary Disable
-
-```bash
-# Disable for one commit
-git commit --no-verify
-
-# Re-enable (automatic on next commit)
-```
-
-## Useful Aliases
-
-Add to your `.bashrc` or `.zshrc`:
-
-```bash
-# Pre-commit aliases
-alias pc='pre-commit run --all-files'
-alias pci='pre-commit install'
-alias pcu='pre-commit autoupdate'
-alias pcr='pre-commit run'
-
-# Git with pre-commit
-alias gpc='git add -A && pre-commit run'
-alias gcv='git commit --no-verify'  # Use sparingly!
-```
-
-## CI/CD Integration
-
-Pre-commit hooks should also run in CI:
-
-```yaml
-# .github/workflows/pre-commit.yml
-name: Pre-commit Checks
-on: [push, pull_request]
-jobs:
-  pre-commit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-      - name: Install dependencies
-        run: |
-          pip install pre-commit
-          pip install ansible-lint yamllint detect-secrets
-      - name: Run pre-commit
-        run: pre-commit run --all-files --show-diff-on-failure
-```
-
-## Hook Execution Order
-
-Hooks run in the order defined in `.pre-commit-config.yaml`:
-
-1. **General checks** (syntax, formatting)
-2. **Linting** (yamllint, ansible-lint)
-3. **Security** (detect-secrets, gitleaks)
-4. **Custom checks** (constitutional compliance)
-5. **Documentation checks**
-
-## Performance Tips
-
-```bash
-# Run only on changed files (faster)
-pre-commit run
-
-# Skip slow hooks during development
-SKIP=ee-build-test,molecule-tests git commit -m "WIP"
-
-# Cache results (automatic)
-# Cache location: ~/.cache/pre-commit/
-```
-
-## Troubleshooting Quick Fixes
+## Troubleshooting
 
 ### Hook Installation Failed
 
@@ -319,16 +355,93 @@ time pre-commit run --all-files --verbose
 SKIP=slow-hook git commit -m "message"
 ```
 
+### Fix All Auto-fixable Issues
+
+```bash
+# Run multiple times until no changes
+pre-commit run --all-files
+pre-commit run --all-files
+```
+
+---
+
+## Emergency Procedures
+
+### Skip All Hooks (Last Resort)
+
+```bash
+# Only in emergencies!
+git commit --no-verify -m "Emergency fix"
+```
+
+⚠️ **Warning**: This bypasses all security checks!
+
+### Skip Specific Hook
+
+```bash
+# Skip one hook
+SKIP=ansible-lint git commit -m "Fix"
+
+# Skip multiple hooks
+SKIP=ansible-lint,yamllint git commit -m "Fix"
+```
+
+---
+
+## Performance Tips
+
+```bash
+# Run only on changed files (faster)
+pre-commit run
+
+# Skip slow hooks during development
+SKIP=ee-build-test,molecule-tests git commit -m "WIP"
+
+# Cache results (automatic)
+# Cache location: ~/.cache/pre-commit/
+```
+
+---
+
+## CI/CD Integration
+
+Pre-commit hooks also run in CI:
+
+```yaml
+# .github/workflows/pre-commit.yml
+name: Pre-commit Checks
+on: [push, pull_request]
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+      - run: pip install pre-commit
+      - run: pre-commit run --all-files --show-diff-on-failure
+```
+
+---
+
+## Severity Levels
+
+| Symbol | Severity | Action |
+|--------|----------|--------|
+| ❌ | Blocking | Must fix before commit |
+| ⚠️ | Warning | Should fix, but can commit |
+| ℹ️ | Info | FYI only |
+
+---
+
 ## Links
 
-- **Full Documentation**: [docs/PRE-COMMIT-SETUP.md](./PRE-COMMIT-SETUP.md)
 - **Constitution**: [../.specify/memory/constitution.md](../.specify/memory/constitution.md)
+- **Ansible Best Practices**: [./ANSIBLE-BEST-PRACTICES.md](./ANSIBLE-BEST-PRACTICES.md)
+- **Code Style Guide**: [./CODE-STYLE-GUIDE.md](./CODE-STYLE-GUIDE.md)
 - **Pre-commit Docs**: https://pre-commit.com/
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2025-10-30
-
-
+**Version**: 2.0 (Consolidated)  
+**Last Updated**: 2025-01-04
 
