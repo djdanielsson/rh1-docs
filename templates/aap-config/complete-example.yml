@@ -1,0 +1,445 @@
+---
+# Complete AAP Configuration Example
+# This file demonstrates all configuration options available
+# Use this as a reference when creating environment-specific configs
+
+# ============================================================================
+# ORGANIZATIONS
+# ============================================================================
+controller_organizations:
+  - name: "Engineering"
+    description: "Engineering department automation"
+    galaxy_credentials:
+      - "Ansible Galaxy"
+    default_environment: "Production EE"
+
+  - name: "Operations"
+    description: "Operations team automation"
+    galaxy_credentials:
+      - "Ansible Galaxy"
+
+# ============================================================================
+# TEAMS
+# ============================================================================
+controller_teams:
+  - name: "Platform Team"
+    description: "Platform engineering team"
+    organization: "Engineering"
+
+  - name: "App Team"
+    description: "Application development team"
+    organization: "Engineering"
+
+  - name: "Ops Team"
+    description: "Operations team"
+    organization: "Operations"
+
+# ============================================================================
+# CREDENTIAL TYPES (Custom)
+# ============================================================================
+controller_credential_types:
+  - name: "API Token"
+    description: "Custom API token credential"
+    kind: cloud
+    inputs:
+      fields:
+        - id: api_token
+          type: string
+          label: API Token
+          secret: true
+        - id: api_endpoint
+          type: string
+          label: API Endpoint
+    injectors:
+      env:
+        API_TOKEN: "{{ api_token }}"
+        API_ENDPOINT: "{{ api_endpoint }}"
+
+# ============================================================================
+# CREDENTIALS
+# ============================================================================
+controller_credentials:
+  # Machine Credentials
+  - name: "Linux Servers"
+    description: "SSH access to Linux servers"
+    organization: "Engineering"
+    credential_type: "Machine"
+    inputs:
+      username: ansible
+      ssh_key_data: "{{ lookup('env', 'LINUX_SSH_KEY') }}"
+      become_method: sudo
+
+  - name: "Windows Servers"
+    description: "WinRM access to Windows servers"
+    organization: "Engineering"
+    credential_type: "Machine"
+    inputs:
+      username: "{{ lookup('env', 'WIN_USERNAME') }}"
+      password: "{{ lookup('env', 'WIN_PASSWORD') }}"
+
+  # SCM Credentials
+  - name: "GitHub - Main"
+    description: "GitHub access for repositories"
+    organization: "Engineering"
+    credential_type: "Source Control"
+    inputs:
+      username: git-user
+      ssh_key_data: "{{ lookup('env', 'GITHUB_SSH_KEY') }}"
+
+  - name: "GitLab - Internal"
+    description: "GitLab access for internal repos"
+    organization: "Engineering"
+    credential_type: "Source Control"
+    inputs:
+      username: gitlab-user
+      password: "{{ lookup('env', 'GITLAB_TOKEN') }}"
+
+  # Container Registry
+  - name: "Quay.io"
+    description: "Quay.io registry access"
+    organization: "Engineering"
+    credential_type: "Container Registry"
+    inputs:
+      host: quay.io
+      username: "{{ lookup('env', 'QUAY_USERNAME') }}"
+      password: "{{ lookup('env', 'QUAY_PASSWORD') }}"
+      verify_ssl: true
+
+  # Cloud Credentials
+  - name: "AWS - Production"
+    description: "AWS production account"
+    organization: "Operations"
+    credential_type: "Amazon Web Services"
+    inputs:
+      username: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+      password: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+
+  # Vault
+  - name: "HashiCorp Vault"
+    description: "Vault server access"
+    organization: "Engineering"
+    credential_type: "Vault"
+    inputs:
+      vault_server: "https://vault.example.com:8200"
+      vault_token: "{{ lookup('env', 'VAULT_TOKEN') }}"
+
+# ============================================================================
+# EXECUTION ENVIRONMENTS
+# ============================================================================
+controller_execution_environments:
+  - name: "Production EE"
+    description: "Production execution environment"
+    image: "quay.io/myorg/custom-ee:1.0.0"
+    organization: "Engineering"
+    pull: missing
+
+  - name: "Development EE"
+    description: "Development execution environment"
+    image: "quay.io/myorg/custom-ee:dev"
+    organization: "Engineering"
+    pull: always
+
+  - name: "Minimal EE"
+    description: "Minimal execution environment"
+    image: "registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9:latest"
+    organization: "Engineering"
+    pull: missing
+
+# ============================================================================
+# PROJECTS
+# ============================================================================
+controller_projects:
+  - name: "Infrastructure Playbooks"
+    description: "Infrastructure automation playbooks"
+    organization: "Engineering"
+    scm_type: git
+    scm_url: "https://github.com/myorg/infrastructure-playbooks.git"
+    scm_branch: main
+    scm_credential: "GitHub - Main"
+    scm_update_on_launch: true
+    scm_update_cache_timeout: 86400
+    scm_clean: true
+    default_environment: "Production EE"
+
+  - name: "Application Deployment"
+    description: "Application deployment playbooks"
+    organization: "Engineering"
+    scm_type: git
+    scm_url: "https://github.com/myorg/app-deployment.git"
+    scm_branch: main
+    scm_credential: "GitHub - Main"
+    scm_update_on_launch: true
+    default_environment: "Production EE"
+
+  - name: "AAP Configuration"
+    description: "AAP configuration as code"
+    organization: "Engineering"
+    scm_type: git
+    scm_url: "https://github.com/djdanielsson/rh1-aap-config-as-code.git"
+    scm_branch: main
+    scm_credential: "GitHub - Main"
+    scm_update_on_launch: false
+    default_environment: "Minimal EE"
+
+# ============================================================================
+# INVENTORIES
+# ============================================================================
+controller_inventories:
+  - name: "Production"
+    description: "Production environment inventory"
+    organization: "Engineering"
+    variables:
+      env: production
+      ansible_connection: ssh
+
+  - name: "Staging"
+    description: "Staging environment inventory"
+    organization: "Engineering"
+    variables:
+      env: staging
+
+  - name: "Development"
+    description: "Development environment inventory"
+    organization: "Engineering"
+    variables:
+      env: development
+
+# ============================================================================
+# HOSTS
+# ============================================================================
+controller_hosts:
+  - name: "web01.prod.example.com"
+    inventory: "Production"
+    variables:
+      ansible_host: 10.0.1.10
+      server_role: webserver
+
+  - name: "web02.prod.example.com"
+    inventory: "Production"
+    variables:
+      ansible_host: 10.0.1.11
+      server_role: webserver
+
+  - name: "db01.prod.example.com"
+    inventory: "Production"
+    variables:
+      ansible_host: 10.0.2.10
+      server_role: database
+
+  - name: "app01.stage.example.com"
+    inventory: "Staging"
+    variables:
+      ansible_host: 10.1.1.10
+      server_role: application
+
+# ============================================================================
+# GROUPS
+# ============================================================================
+controller_groups:
+  - name: "webservers"
+    inventory: "Production"
+    variables:
+      http_port: 80
+      https_port: 443
+
+  - name: "databases"
+    inventory: "Production"
+    variables:
+      db_port: 5432
+
+  - name: "loadbalancers"
+    inventory: "Production"
+    variables:
+      backend_servers: "{{ groups['webservers'] }}"
+
+# ============================================================================
+# JOB TEMPLATES
+# ============================================================================
+controller_templates:
+  - name: "Deploy Web Application"
+    description: "Deploy web application to servers"
+    job_type: run
+    inventory: "Production"
+    project: "Application Deployment"
+    playbook: "deploy-webapp.yml"
+    credentials:
+      - "Linux Servers"
+    execution_environment: "Production EE"
+    verbosity: 0
+    diff_mode: true
+    ask_variables_on_launch: true
+    extra_vars:
+      app_version: latest
+    survey_enabled: true
+    survey_spec:
+      name: "Deployment Options"
+      description: "Configure deployment options"
+      spec:
+        - question_name: "Application Version"
+          question_description: "Version to deploy"
+          required: true
+          type: text
+          variable: app_version
+          default: "latest"
+        - question_name: "Perform Backup"
+          question_description: "Backup before deployment"
+          required: true
+          type: multiplechoice
+          variable: perform_backup
+          choices:
+            - "yes"
+            - "no"
+          default: "yes"
+
+  - name: "Configure Web Servers"
+    description: "Configure web server settings"
+    job_type: run
+    inventory: "Production"
+    project: "Infrastructure Playbooks"
+    playbook: "configure-webserver.yml"
+    credentials:
+      - "Linux Servers"
+    execution_environment: "Production EE"
+    limit: "webservers"
+    become_enabled: true
+
+  - name: "Database Backup"
+    description: "Backup database"
+    job_type: run
+    inventory: "Production"
+    project: "Infrastructure Playbooks"
+    playbook: "backup-database.yml"
+    credentials:
+      - "Linux Servers"
+    execution_environment: "Production EE"
+    limit: "databases"
+    become_enabled: true
+
+  - name: "System Patching"
+    description: "Apply system patches"
+    job_type: run
+    inventory: "Production"
+    project: "Infrastructure Playbooks"
+    playbook: "patch-systems.yml"
+    credentials:
+      - "Linux Servers"
+    execution_environment: "Production EE"
+    become_enabled: true
+    ask_limit_on_launch: true
+
+# ============================================================================
+# WORKFLOW JOB TEMPLATES
+# ============================================================================
+controller_workflows:
+  - name: "Full Application Deployment"
+    description: "Complete application deployment workflow"
+    organization: "Engineering"
+    inventory: "Production"
+    survey_enabled: true
+    survey_spec:
+      name: "Deployment Configuration"
+      description: "Configure the deployment"
+      spec:
+        - question_name: "Version"
+          question_description: "Application version"
+          required: true
+          type: text
+          variable: app_version
+          default: "latest"
+    workflow_nodes:
+      - identifier: backup
+        unified_job_template: "Database Backup"
+        success_nodes:
+          - deploy
+      - identifier: deploy
+        unified_job_template: "Deploy Web Application"
+        success_nodes:
+          - configure
+      - identifier: configure
+        unified_job_template: "Configure Web Servers"
+        success_nodes:
+          - verify
+      - identifier: verify
+        unified_job_template: "Verify Deployment"
+        failure_nodes:
+          - rollback
+      - identifier: rollback
+        unified_job_template: "Rollback Deployment"
+
+# ============================================================================
+# SCHEDULES
+# ============================================================================
+controller_schedules:
+  - name: "Nightly Database Backup"
+    description: "Run database backup every night"
+    unified_job_template: "Database Backup"
+    rrule: "DTSTART:20250101T020000Z RRULE:FREQ=DAILY;INTERVAL=1"
+    enabled: true
+
+  - name: "Weekly System Patching"
+    description: "Patch systems every Sunday"
+    unified_job_template: "System Patching"
+    rrule: "DTSTART:20250105T030000Z RRULE:FREQ=WEEKLY;BYDAY=SU"
+    enabled: true
+
+  - name: "Monthly Security Scan"
+    description: "Run security scan monthly"
+    unified_job_template: "Security Scan"
+    rrule: "DTSTART:20250101T010000Z RRULE:FREQ=MONTHLY;BYMONTHDAY=1"
+    enabled: true
+
+# ============================================================================
+# NOTIFICATIONS
+# ============================================================================
+controller_notifications:
+  - name: "Slack - Platform Team"
+    description: "Notifications to platform team Slack"
+    organization: "Engineering"
+    notification_type: slack
+    notification_configuration:
+      token: "{{ lookup('env', 'SLACK_TOKEN') }}"
+      channels:
+        - "#platform-alerts"
+
+  - name: "Email - Ops Team"
+    description: "Email notifications to ops team"
+    organization: "Operations"
+    notification_type: email
+    notification_configuration:
+      host: smtp.example.com
+      port: 587
+      use_tls: true
+      username: "{{ lookup('env', 'SMTP_USERNAME') }}"
+      password: "{{ lookup('env', 'SMTP_PASSWORD') }}"
+      sender: "aap@example.com"
+      recipients:
+        - "ops-team@example.com"
+
+# ============================================================================
+# SETTINGS
+# ============================================================================
+controller_settings:
+  settings:
+    # Session settings
+    SESSION_COOKIE_AGE: 1800
+    SESSIONS_PER_USER: 3
+    
+    # Job settings
+    DEFAULT_JOB_TIMEOUT: 3600
+    DEFAULT_INVENTORY_UPDATE_TIMEOUT: 3600
+    DEFAULT_PROJECT_UPDATE_TIMEOUT: 3600
+    
+    # Logging
+    LOG_AGGREGATOR_ENABLED: false
+    LOG_AGGREGATOR_LEVEL: INFO
+    
+    # UI settings
+    CUSTOM_LOGO: ""
+    CUSTOM_LOGIN_INFO: "Cloud-Native Ansible Lifecycle Platform"
+    
+    # Activity Stream
+    ACTIVITY_STREAM_ENABLED: true
+    ACTIVITY_STREAM_ENABLED_FOR_INVENTORY_SYNC: true
+
+
+

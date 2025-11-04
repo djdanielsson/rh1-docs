@@ -1,0 +1,202 @@
+# Root .gitignore for Cloud-Native Ansible Lifecycle Platform
+# Covers common patterns across all repositories
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.settings/
+.classpath
+*.sublime-project
+*.sublime-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.Python
+env/
+venv/
+ENV/
+.venv
+ansible-venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+*.cover
+.hypothesis/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ansible
+*.retry
+.ansible/
+.ansible-navigator/
+ansible-navigator.log
+ansible.log
+collections/ansible_collections/
+
+# Secrets and credentials (Constitutional Article V: Zero-Trust Security)
+*secret*
+*password*
+*token*
+*.key
+*.crt
+*.pem
+*.pfx
+*.p12
+*-vault-pass*
+vault-password.txt
+vault-pass.txt
+.vault_pass
+.vault_password
+.ansible_vault_password
+kubeconfig
+.kubeconfig
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.log
+*.bak
+*.backup
+
+# Test output
+test-results/
+test-output/
+test-reports/
+*.xml
+junit/
+
+# Pre-commit
+.pre-commit-config.yaml.backup
+
+# Documentation build artifacts
+docs/_build/
+docs/.doctrees/
+site/
+_site/
+
+# macOS
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+.directory
+.Trash-*
+.nfs*
+
+# Archive files
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.rar
+*.7z
+
+# Local overrides (for developers)
+*.local
+*.local.*
+local-*
+override-*
+
+# Node.js (if any JS tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Container/Kubernetes artifacts
+context/
+.docker/
+.podman/
+
+# SBOM and security scans
+sbom/
+*.sbom
+*.spdx
+*.cyclonedx
+scan-results/
+*.scan
+
+# Git
+*.orig
+*.rej
+
+# CI/CD local testing
+.github/workflows/*.local.yml
+
+# Molecule
+.molecule/
+.cache/
+
+# Keep important configuration files
+!.ansible-lint
+!.yamllint
+!.bandit
+!.flake8
+!.pylintrc
+!.editorconfig
+!.gitattributes
+
+# Keep example and template files
+!example-*
+!template-*
+!templates/**
+!examples/**
+
+# Keep documentation
+!README.md
+!*.md
+!docs/**/*.md
+
+# Keep test fixtures
+!tests/fixtures/**
+
+# Ignore but keep directory structure
+**/.gitkeep
+!**/.gitkeep
+
