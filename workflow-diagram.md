@@ -1,4 +1,159 @@
-# Ansible Automation Platform Code Lifecycle - Workflow Diagram
+# Ansible Automation Platform Code Lifecycle - Workflow Diagrams
+
+## Git Workflow - Trunk-Based Development with Tags
+
+```mermaid
+gitGraph
+    commit id: "Initial commit"
+    commit id: "Setup project structure"
+    
+    branch feature/webserver-role
+    checkout feature/webserver-role
+    commit id: "Create webserver role"
+    commit id: "Add tasks"
+    commit id: "Add molecule tests"
+    commit id: "Fix ansible-lint issues"
+    
+    checkout main
+    merge feature/webserver-role tag: "Merge PR #123"
+    
+    branch feature/database-role
+    checkout feature/database-role
+    commit id: "Create database role"
+    commit id: "Add handlers"
+    
+    checkout main
+    branch feature/monitoring
+    checkout feature/monitoring
+    commit id: "Add monitoring tasks"
+    commit id: "Update requirements.yml"
+    
+    checkout main
+    merge feature/database-role tag: "Merge PR #124"
+    commit id: "Update EE definition"
+    commit id: "Dev testing passed" tag: "qa-v1.1.0"
+    
+    checkout feature/monitoring
+    commit id: "Fix molecule tests"
+    
+    checkout main
+    merge feature/monitoring tag: "Merge PR #125"
+    commit id: "QA testing passed" tag: "prod-v1.0.0"
+    
+    commit id: "Hotfix: update vars"
+    commit id: "Tested in dev" tag: "qa-v1.1.1"
+    commit id: "QA verified" tag: "prod-v1.0.1"
+```
+
+### Git Workflow Explanation
+
+**Trunk-Based Development Strategy:**
+- **main branch**: Single source of truth, always deployable
+- **Feature branches**: Short-lived, merge back to main frequently
+- **Git tags**: Immutable markers for environment promotion
+  - `qa-vX.Y.Z`: Tags for QA environment deployment
+  - `prod-vX.Y.Z`: Tags for Production environment deployment
+
+**Workflow Steps:**
+1. Create feature branch from main
+2. Develop playbooks/roles/collections
+3. Run local tests (ansible-lint, molecule)
+4. Create Pull Request
+5. CI/CD runs automated tests
+6. Code review and approval
+7. Merge to main
+8. Test in Dev environment (tracks main branch)
+9. Create QA tag when Dev tests pass
+10. Deploy to QA using tag
+11. Create Prod tag when QA tests pass
+12. Deploy to Prod using tag
+
+**Key Benefits:**
+- Simplified Git management (no long-lived environment branches)
+- Immutable releases via tags
+- Clear promotion path: Dev (main) → QA (tag) → Prod (tag)
+- Easy rollback (deploy previous tag)
+
+---
+
+## Code Development and Testing Flow
+
+```mermaid
+flowchart TD
+    Start([New Feature/Fix]) --> Clone[Clone Repository]
+    Clone --> Branch[Create Feature Branch<br/>feature/my-feature]
+    
+    Branch --> DevLoop{Development<br/>Cycle}
+    
+    DevLoop --> Code[Write Ansible Code<br/>Playbooks/Roles/Collections]
+    Code --> Structure[Follow Standards<br/>- defaults/main.yml<br/>- vars/main.yml<br/>- Variable prefixes<br/>- FQCNs]
+    
+    Structure --> LocalTest[Local Testing]
+    LocalTest --> Lint[ansible-lint]
+    Lint --> Molecule[Molecule Tests<br/>molecule converge<br/>molecule verify]
+    Molecule --> Idempotent[Idempotence Check]
+    
+    Idempotent --> LocalPass{Tests Pass?}
+    LocalPass -->|No| DevLoop
+    LocalPass -->|Yes| Commit[Git Commit<br/>Clear message]
+    
+    Commit --> Push[Push Feature Branch]
+    Push --> PR[Create Pull Request]
+    
+    PR --> CI[CI/CD Pipeline Triggered]
+    CI --> CI_Lint[ansible-lint]
+    CI --> CI_Molecule[molecule test]
+    CI --> CI_Other[Other checks]
+    
+    CI_Other --> CIPass{CI Pass?}
+    CIPass -->|No| DevLoop
+    CIPass -->|Yes| Review[Code Review]
+    
+    Review --> ReviewPass{Approved?}
+    ReviewPass -->|No| DevLoop
+    ReviewPass -->|Yes| Merge[Merge to main]
+    
+    Merge --> MainBranch[(main Branch)]
+    MainBranch --> DevDeploy[Dev Environment<br/>Auto-syncs main]
+    
+    DevDeploy --> DevTest{Integration<br/>Tests Pass?}
+    DevTest -->|No| Hotfix[Create Hotfix Branch]
+    Hotfix --> DevLoop
+    
+    DevTest -->|Yes| QATag[Create QA Tag<br/>qa-vX.Y.Z]
+    QATag --> QAReady([Ready for QA Deployment])
+    
+    style Code fill:#fff4e1
+    style LocalTest fill:#ffe1f5
+    style CI fill:#ffe1f5
+    style MainBranch fill:#e1f5ff
+    style QATag fill:#90EE90
+    style QAReady fill:#90EE90
+```
+
+### Development Flow Key Points
+
+**Local Development:**
+- Feature branches for all changes
+- Local testing before pushing
+- ansible-lint for code quality
+- Molecule for role/collection testing
+
+**CI/CD Integration:**
+- Automated testing on every PR
+- Blocks merge if tests fail
+- Enforces code quality standards
+
+**Code Standards:**
+- Idempotent playbooks
+- Named tasks for debugging
+- Proper variable precedence (defaults vs vars)
+- FQCN for all modules
+- Comprehensive README files
+
+---
+
+## Complete AAP Deployment Pipeline
 
 ```mermaid
 flowchart TD
