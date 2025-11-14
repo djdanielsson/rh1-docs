@@ -8,7 +8,7 @@ This guide outlines a robust workflow specifically for **Ansible Automation Plat
 * **Consistency:** Adhere to defined standards across the team for content stored in Git and executed via AAP.[^1]  
 * **Idempotency:** Ensure all automation executed via AAP Job Templates can be run multiple times without unintended side effects.[^12]
 
-### ---
+---
 
 **Phase 1: Plan & Structure \- Laying the Foundation for AAP**
 
@@ -57,7 +57,7 @@ This guide outlines a robust workflow specifically for **Ansible Automation Plat
 * Manage collection dependencies via a requirements.yml file in your Git project root. This file is used when building Execution Environments or can be processed during AAP Project syncs.[^32]  
 * Prioritize Red Hat Certified for supported content and Ansible Validated Content for enterprise-grade automation both available through Automation Hub within AAP.[^48]
 
-### ---
+---
 
 **Phase 2: Develop & Version \- Building Reliable Code for AAP**
 
@@ -84,7 +84,7 @@ This guide outlines a robust workflow specifically for **Ansible Automation Plat
   * *Why this strategy for AAP?* It simplifies Git management, avoids environment branch synchronization issues 32, and integrates cleanly with AAP Projects' ability to deploy specific tags.  
 * **Mandate Code Reviews:** Use Pull Requests (PRs) or Merge Requests (MRs) in your Git platform for all changes merged into main. This ensures code quality before it's pulled into AAP.[^84]
 
-### ---
+---
 
 **Phase 3: Test \- Ensuring Quality Before AAP Execution**
 
@@ -108,7 +108,7 @@ This guide outlines a robust workflow specifically for **Ansible Automation Plat
 * **CI/CD Integration:** Run molecule test in your CI/CD pipeline (triggered on PRs) to execute the full test sequence *before* merging code that AAP will consume.[^68]  
 * **Idempotence Check:** Ensure the idempotence check within molecule test passes.[^53]
 
-### ---
+---
 
 ## Visual Workflow Diagrams
 
@@ -261,7 +261,7 @@ flowchart TD
 - FQCN for all modules
 - Comprehensive README files
 
-### ---
+---
 
 **Phase 4: Deploy & Orchestrate \- Using Ansible Automation Platform (AAP)**
 
@@ -298,7 +298,7 @@ flowchart TD
   * Define success/failure paths for conditional logic (e.g., run rollback JT on failure).[^32]  
 * Trigger workflows based on SCM webhooks or schedules within AAP.[^32]
 
-### ---
+---
 
 **Phase 5: Manage AAP \- Configuration as Code (CaC)**
 
@@ -327,7 +327,7 @@ flowchart TD
   * **Lookup Plugins (Optional):** Use Ansible lookup plugins like env or cloud parameter stores within CaC definitions for dynamic values.[^68]  
 * Use **Ansible Vault** within the CaC repository *only* for secrets needed by the CaC playbook itself (e.g., an AAP service account password), not for the runtime credentials AAP uses.[^68]
 
-### ---
+---
 
 **Phase 6: Putting It All Together \- Synchronizing the Lifecycle**
 
@@ -370,7 +370,108 @@ By tightly coupling the versioning of application code, Execution Environments, 
 
 By following these steps within the **Ansible Automation Platform** ecosystem, you can establish a streamlined, reliable, and maintainable lifecycle for your enterprise automation.
 
-#### **![][image1]**
+## Complete AAP Deployment Pipeline
+
+```mermaid
+flowchart TD
+    Start([Start: Automation Need]) --> Phase1[Phase 1: Plan & Structure]
+    
+    Phase1 --> P1_1[Define Goal]
+    Phase1 --> P1_2[Setup Inventories<br/>Dev/QA/Prod]
+    Phase1 --> P1_3[Setup Dev Environment<br/>IDE, ADT, VSCode]
+    Phase1 --> P1_4[Adopt Project Structure<br/>Alternative Directory Layout]
+    Phase1 --> P1_5[Standardize Role Creation<br/>ansible-creator]
+    Phase1 --> P1_6[Utilize Collections<br/>requirements.yml]
+    
+    P1_6 --> Phase2[Phase 2: Develop & Version]
+    
+    Phase2 --> P2_1[Write High-Quality Code<br/>Idempotent, Named Tasks]
+    Phase2 --> P2_2[Manage Secrets<br/>AAP Credentials]
+    Phase2 --> P2_3[Version Control in Git<br/>main branch]
+    
+    P2_3 --> FeatureBranch[Create Feature Branch]
+    FeatureBranch --> P2_4[Code Development]
+    P2_4 --> LocalLint[Local: ansible-lint]
+    
+    LocalLint --> Phase3[Phase 3: Test]
+    
+    Phase3 --> P3_1[Molecule Testing<br/>Local/Container]
+    P3_1 --> P3_2[molecule converge]
+    P3_2 --> P3_3[molecule verify]
+    P3_3 --> P3_4[Idempotence Check]
+    
+    P3_4 --> PR[Create Pull Request]
+    PR --> CI[CI/CD Pipeline]
+    CI --> CI_Lint[Run ansible-lint]
+    CI --> CI_Molecule[Run molecule test]
+    
+    CI_Molecule --> CodeReview[Code Review]
+    CodeReview --> MergeMain[Merge to main]
+    
+    MergeMain --> MainBranch[(Git main Branch)]
+    
+    MainBranch --> DevSync[Dev AAP Project<br/>Syncs main branch]
+    DevSync --> DevTest{Test in Dev?}
+    DevTest -->|Pass| CreateQATag[Create Git Tag<br/>qa-v1.1.0]
+    DevTest -->|Fail| FeatureBranch
+    
+    CreateQATag --> BuildEE[Build Execution Environment<br/>ansible-builder]
+    BuildEE --> TagEE[Tag EE Image<br/>my-registry/my-ee:qa-v1.1.0]
+    TagEE --> PushEE[Push to Container Registry<br/>Automation Hub/Quay]
+    
+    PushEE --> UpdateCaC[Update CaC Definitions<br/>infra.aap_configuration]
+    UpdateCaC --> CaCGit[(CaC Git Repository)]
+    
+    CaCGit --> Phase4QA[Phase 4: Deploy to QA]
+    
+    Phase4QA --> WF_QA[QA Workflow Job Template]
+    WF_QA --> QA1[Sync QA Project<br/>Tag: qa-v1.1.0]
+    QA1 --> QA2[Pull EE Image<br/>qa-v1.1.0]
+    QA2 --> QA3[Run Job Template<br/>QA Inventory]
+    QA3 --> QA4{QA Tests Pass?}
+    
+    QA4 -->|Fail| QA_Rollback[Rollback JT]
+    QA_Rollback --> FeatureBranch
+    
+    QA4 -->|Pass| QA_Approval[Approval Node<br/>QA Sign-off]
+    
+    QA_Approval -->|Approved| CreateProdTag[Create Git Tag<br/>prod-v1.0.0]
+    QA_Approval -->|Rejected| FeatureBranch
+    
+    CreateProdTag --> BuildProdEE[Build/Tag Prod EE<br/>prod-v1.0.0]
+    BuildProdEE --> PushProdEE[Push to Registry]
+    
+    PushProdEE --> UpdateProdCaC[Update Prod CaC]
+    UpdateProdCaC --> Phase4Prod[Phase 4: Deploy to Prod]
+    
+    Phase4Prod --> WF_Prod[Prod Workflow Job Template]
+    WF_Prod --> Prod1[Sync Prod Project<br/>Tag: prod-v1.0.0]
+    Prod1 --> Prod2[Pull EE Image<br/>prod-v1.0.0]
+    Prod2 --> Prod3[Run Job Template<br/>Prod Inventory]
+    Prod3 --> Prod4{Prod Deploy Success?}
+    
+    Prod4 -->|Fail| Prod_Rollback[Rollback JT<br/>Previous Tag]
+    Prod_Rollback --> Incident[Incident Review]
+    
+    Prod4 -->|Success| Prod_Approval[Approval Node<br/>Prod Sign-off]
+    Prod_Approval --> Complete([Deployment Complete])
+    
+    Phase5[Phase 5: Manage AAP - CaC] -.->|Configures| Phase4QA
+    Phase5 -.->|Configures| Phase4Prod
+    Phase5 --> CaC1[AAP Configuration as Code<br/>Projects, JTs, WFJTs, EEs]
+    CaC1 --> CaC2[GitOps Workflow<br/>PR/MR for Changes]
+    CaC2 --> CaC3[CI/CD Auto-applies<br/>to AAP Instances]
+    
+    style Phase1 fill:#e1f5ff
+    style Phase2 fill:#fff4e1
+    style Phase3 fill:#ffe1f5
+    style Phase4QA fill:#e1ffe1
+    style Phase4Prod fill:#e1ffe1
+    style Phase5 fill:#f5e1ff
+    style Complete fill:#90EE90
+    style QA_Rollback fill:#ffcccc
+    style Prod_Rollback fill:#ffcccc
+```
 
 #### 
 
