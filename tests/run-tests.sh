@@ -28,9 +28,9 @@ cd "$(dirname "$0")/.."
 run_test() {
     local test_name="$1"
     local test_command="$2"
-    
+
     echo -e "${BLUE}Running: ${test_name}${NC}"
-    
+
     if eval "$test_command"; then
         echo -e "${GREEN}✅ PASSED: ${test_name}${NC}"
         ((TESTS_PASSED++))
@@ -46,7 +46,7 @@ run_test() {
 skip_test() {
     local test_name="$1"
     local reason="$2"
-    
+
     echo -e "${YELLOW}⊘ SKIPPED: ${test_name} - ${reason}${NC}"
     ((TESTS_SKIPPED++))
 }
@@ -157,7 +157,7 @@ echo ""
 if command -v detect-secrets &> /dev/null; then
     run_test "Secret Detection: cluster-config" \
         "cd cluster-config && detect-secrets scan" || true
-    
+
     run_test "Secret Detection: aap-config-as-code" \
         "cd aap-config-as-code && detect-secrets scan" || true
 else

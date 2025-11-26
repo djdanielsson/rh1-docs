@@ -148,7 +148,7 @@ controller_organizations:
     galaxy_credentials:
       - "Ansible Galaxy"
     default_environment: "Default Execution Environment"
-    
+
   - name: "Application Teams"
     description: "Application development teams"
     galaxy_credentials:
@@ -169,21 +169,21 @@ controller_templates:
     scm_branch: "main"  # Dev uses main branch
     execution_environment: "Automation EE - Latest"
     playbook: "playbooks/deploy-webserver.yml"
-    
+
     credentials:
       - "Dev SSH Key"
       - "Dev Vault Credential"
-    
+
     ask_variables_on_launch: true
     ask_limit_on_launch: true
-    
+
     survey_enabled: false
     concurrent_jobs_enabled: true
-    
+
     extra_vars:
       webserver_port: 8080
       webserver_ssl_enabled: false
-    
+
     labels:
       - "dev"
       - "webserver"
@@ -288,7 +288,7 @@ spec:
           value: "https://github.com/org/aap-config-as-code"
         - name: revision
           value: $(params.git-revision)
-    
+
     - name: run-cac
       runAfter: [git-clone]
       taskSpec:
@@ -455,12 +455,12 @@ controller_workflows:
   - name: "Full Deployment Workflow"
     organization: "Platform"
     inventory: "QA Infrastructure"
-    
+
 controller_workflow_job_templates:
   - identifier: "deploy-db"
     workflow: "Full Deployment Workflow"
     unified_job_template: "Deploy Database"
-    
+
   - identifier: "deploy-app"
     workflow: "Full Deployment Workflow"
     unified_job_template: "Deploy Application"
@@ -526,7 +526,7 @@ controller_inventories:
   - name: "OCP Virtualization Inventory"
     organization: "Platform Team"
     description: "Dynamic inventory from OpenShift Virtualization"
-    
+
 controller_inventory_sources:
   - name: "OCP-V Dynamic Source"
     inventory: "OCP Virtualization Inventory"
@@ -1571,7 +1571,7 @@ argument_specs:
       - Installs and configures Apache HTTP Server
       - Manages firewall rules
       - Deploys custom index page
-    
+
     options:
       webserver_port:
         type: int

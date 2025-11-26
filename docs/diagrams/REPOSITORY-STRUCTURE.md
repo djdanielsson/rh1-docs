@@ -24,7 +24,7 @@ graph TB
     COL -->|Builds| REL
     EE -->|Builds| REL
     AAP -->|Uses| REL
-    
+
     style CC fill:#ffadad
     style AAP fill:#ffd6a5
     style COL fill:#fdffb6
@@ -41,7 +41,7 @@ graph TB
 ```mermaid
 graph TB
     ROOT[cluster-config/]
-    
+
     ROOT --> ARGO[argocd/<br/>ArgoCD Applications]
     ROOT --> TEKTON[tekton/<br/>Pipeline Definitions]
     ROOT --> NAMESPACES[namespaces/<br/>Namespace Resources]
@@ -147,7 +147,7 @@ cluster-config/
 ```mermaid
 graph TB
     ROOT[aap-config-as-code/]
-    
+
     ROOT --> ENV[environments/<br/>Environment Configs]
     ROOT --> SHARED[shared/<br/>Shared Resources]
     ROOT --> PLAYBOOKS[playbooks/<br/>Configuration Playbooks]
@@ -239,7 +239,7 @@ aap-config-as-code/
 ```mermaid
 graph TB
     ROOT[automation-collection/]
-    
+
     ROOT --> PLUGINS[plugins/<br/>Collection Plugins]
     ROOT --> ROLES[roles/<br/>Ansible Roles]
     ROOT --> PLAYBOOKS[playbooks/<br/>Example Playbooks]
@@ -354,7 +354,7 @@ automation-collection/
 ```mermaid
 graph TB
     ROOT[automation-ee/]
-    
+
     ROOT --> BASE[base/<br/>Base EE Definition]
     ROOT --> CUSTOM[custom/<br/>Custom EE Variants]
     ROOT --> SCRIPTS[scripts/<br/>Build Scripts]
@@ -424,7 +424,7 @@ automation-ee/
 ```mermaid
 graph TB
     ROOT[automation-release-manifest/]
-    
+
     ROOT --> RELEASES[releases/<br/>Release Manifests]
     ROOT --> SCHEMAS[schemas/<br/>JSON Schemas]
     ROOT --> SCRIPTS[scripts/<br/>Validation Scripts]
@@ -507,7 +507,7 @@ graph LR
     COL -->|Build| TEK
     EE -->|Build| TEK
     AAP -->|Validate| TEK
-    
+
     TEK -->|Publish| GALAXY
     TEK -->|Publish| QUAY
     TEK -->|Create| REL
@@ -541,7 +541,7 @@ graph TB
     CC -->|Sync| ARGO
     AAP_CONFIG -->|Sync| ARGO
     REL -->|Track| ARGO
-    
+
     ARGO -->|Apply| K8S
     ARGO -->|Configure| AAP_INST
 
@@ -558,7 +558,7 @@ graph TB
 ```mermaid
 graph TB
     START[Start Work]
-    
+
     START --> COL[Clone automation-collection]
     COL --> DEV[Develop Role/Module]
     DEV --> TEST[Run Local Tests]
@@ -579,7 +579,7 @@ graph TB
 ```mermaid
 graph TB
     START[Start Work]
-    
+
     START --> CC[Clone cluster-config]
     CC --> MODIFY[Modify K8s Resources]
     MODIFY --> VALIDATE[Validate Locally]
@@ -600,7 +600,7 @@ graph TB
 ```mermaid
 graph TB
     START[Review Releases]
-    
+
     START --> CHECK[Check Dev Manifests]
     CHECK --> VALIDATE[Validate QA Readiness]
     VALIDATE --> PROMOTE[Trigger QA Promotion]

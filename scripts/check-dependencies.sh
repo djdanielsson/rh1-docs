@@ -22,20 +22,20 @@ ISSUES_FOUND=false
 check_python_deps() {
     local dir=$1
     local name=$2
-    
+
     if [ ! -f "${dir}/requirements.txt" ]; then
         return 0
     fi
-    
+
     echo -e "${BLUE}Checking Python dependencies: ${name}${NC}"
     cd "${dir}"
-    
+
     # Check for outdated packages
     if command -v pip-review &> /dev/null; then
         echo "  → Checking for outdated packages..."
         pip-review --local || true
     fi
-    
+
     # Check for vulnerabilities with pip-audit
     if command -v pip-audit &> /dev/null; then
         echo "  → Scanning for vulnerabilities..."
@@ -48,7 +48,7 @@ check_python_deps() {
     else
         echo -e "  ${YELLOW}⚠  pip-audit not installed, skipping vulnerability scan${NC}"
     fi
-    
+
     cd - > /dev/null
     echo ""
 }
@@ -57,14 +57,14 @@ check_python_deps() {
 check_ansible_deps() {
     local dir=$1
     local name=$2
-    
+
     if [ ! -f "${dir}/requirements.yml" ]; then
         return 0
     fi
-    
+
     echo -e "${BLUE}Checking Ansible collections: ${name}${NC}"
     cd "${dir}"
-    
+
     # Install collections
     if command -v ansible-galaxy &> /dev/null; then
         echo "  → Installing collections..."
@@ -75,7 +75,7 @@ check_ansible_deps() {
     else
         echo -e "  ${YELLOW}⚠  ansible-galaxy not installed${NC}"
     fi
-    
+
     cd - > /dev/null
     echo ""
 }
@@ -116,11 +116,11 @@ echo ""
 
 if command -v gh &> /dev/null; then
     echo -e "${BLUE}Checking GitHub Actions for updates...${NC}"
-    
+
     # Find all workflow files
     WORKFLOW_COUNT=$(find .github/workflows -name "*.yml" -o -name "*.yaml" 2>/dev/null | wc -l)
     echo "  Found ${WORKFLOW_COUNT} workflow files"
-    
+
     # List actions used
     echo "  Actions in use:"
     grep -h "uses:" .github/workflows/*.yml 2>/dev/null | \

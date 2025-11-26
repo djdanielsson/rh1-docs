@@ -134,7 +134,7 @@ sequenceDiagram
     Tek->>Tek: 10. Run final tests
     Tek->>Reg: 11. Publish artifacts
     Tek->>Git: 12. Create release manifest
-    
+
     Git->>Argo: 13. Detect manifest change
     Argo->>Argo: 14. Sync to cluster
 
@@ -204,7 +204,7 @@ stateDiagram-v2
 
     CodeChange --> PlatLoop: If cluster-config changed
     CodeChange --> AppLoop: If collection/EE changed
-    
+
     AppLoop --> PlatLoop: Manifest created
     PlatLoop --> [*]: Deployed
 
@@ -349,7 +349,7 @@ graph TB
     AAP -->|Config| TEK
     COL -->|Build| TEK
     EE -->|Build| TEK
-    
+
     TEK -->|Updates| REL
     REL -->|Versions| ARGO
 
@@ -423,11 +423,11 @@ stateDiagram-v2
     Syncing --> Failed: Sync failed
 
     Healthy --> [*]
-    
+
     Degraded --> Retry: Auto-retry
     Retry --> Syncing
     Retry --> Alert: Max retries
-    
+
     Failed --> Alert: Immediate
     Alert --> Manual: Investigation
     Manual --> Syncing: Fix applied

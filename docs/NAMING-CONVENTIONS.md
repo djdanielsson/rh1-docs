@@ -724,16 +724,16 @@ roles/webserver/
     webserver_packages: []
     webserver_port: 80
     webserver_ssl_enabled: false
-    
+
   tasks/main.yml:
     - name: Install web server packages
     - name: Configure web server
     - name: Ensure web server is started
-    
+
   handlers/main.yml:
     - name: restart webserver
     - name: reload webserver
-    
+
   templates/
     httpd.conf.j2
     index.html.j2

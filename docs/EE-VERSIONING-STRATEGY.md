@@ -270,7 +270,7 @@ controller_templates:
     project_version: "qa-v1.1.0"  # ← Git tag
     execution_environment: "Automation EE QA"
     # ↓ EE configured to use version-tagged image
-    
+
 controller_execution_environments:
   - name: "Automation EE QA"
     image: "quay.io/myorg/automation-ee:qa-v1.1.0"  # ← Matching EE tag
@@ -292,18 +292,18 @@ controller_templates:
     organization: "Platform"
     inventory: "QA Infrastructure"
     project: "Automation Collection"
-    
+
     # ⚠️ CRITICAL: Lock to specific Git tag
     scm_branch: "qa-v1.1.0"  # NOT 'main', specific tag
-    
+
     # ⚠️ CRITICAL: Lock to version-tagged EE
     execution_environment: "Automation EE - qa-v1.1.0"
-    
+
     playbook: "playbooks/deploy-webserver.yml"
-    
+
     credentials:
       - "QA SSH Key"
-    
+
     # Don't auto-update in QA/Prod
     ask_scm_branch_on_launch: false
     ask_execution_environment_on_launch: false
@@ -318,13 +318,13 @@ controller_execution_environments:
   - name: "Automation EE - qa-v1.1.0"
     description: "QA Execution Environment (v1.1.0)"
     organization: "Platform"
-    
+
     # ⚠️ CRITICAL: Use full image path with version tag
     image: "quay.io/myorg/automation-ee:qa-v1.1.0"
-    
+
     # Use digest for ultimate immutability (optional but recommended)
     # image: "quay.io/myorg/automation-ee@sha256:abc123..."
-    
+
     credential: "Quay.io Registry"
     pull: "missing"  # Don't pull if already present
 ```
@@ -338,13 +338,13 @@ controller_execution_environments:
   - name: "Automation EE - prod-v1.0.0"
     description: "Production Execution Environment (v1.0.0)"
     organization: "Platform"
-    
+
     # Best Practice: Use image digest in production
     image: "quay.io/myorg/automation-ee@sha256:1234567890abcdef..."
-    
+
     # Or version tag (also acceptable)
     # image: "quay.io/myorg/automation-ee:prod-v1.0.0"
-    
+
     credential: "Quay.io Registry"
     pull: "missing"
 ```
@@ -369,7 +369,7 @@ components:
     ref_type: "tag"
     ref: "qa-v1.1.0"
     commit: "abc1234567890abcdef1234567890abcdef12345"
-    
+
   execution_environment:
     name: "automation-ee"
     registry: "quay.io"
@@ -379,7 +379,7 @@ components:
     base_image: "quay.io/ansible/creator-ee:v0.20.1"
     python_version: "3.11"
     ansible_core_version: "2.16.0"
-    
+
     # Track dependencies in EE
     collections:
       - name: "ansible.posix"
@@ -390,17 +390,17 @@ components:
         version: "8.1.0"
       - name: "kubevirt.core"
         version: "1.3.0"
-    
+
     python_packages:
       - name: "jmespath"
         version: "1.0.1"
       - name: "netaddr"
         version: "0.9.0"
-    
+
     system_packages:
       - "git-2.43.0"
       - "openssh-clients-8.7"
-    
+
   aap_configuration:
     repository: "github.com/myorg/aap-config-as-code"
     ref_type: "tag"
@@ -452,7 +452,7 @@ spec:
   workspaces:
     - name: source
     - name: dockerconfig
-    
+
   tasks:
     # 1. Clone repo at specific tag
     - name: git-clone
@@ -466,7 +466,7 @@ spec:
       workspaces:
         - name: output
           workspace: source
-    
+
     # 2. Validate tag format
     - name: validate-tag
       runAfter: [git-clone]
@@ -488,7 +488,7 @@ spec:
       params:
         - name: tag
           value: $(params.git-tag)
-    
+
     # 3. Build EE with ansible-builder
     - name: build-ee
       runAfter: [validate-tag]
@@ -502,7 +502,7 @@ spec:
       workspaces:
         - name: source
           workspace: source
-    
+
     # 4. Tag with commit SHA
     - name: tag-with-sha
       runAfter: [build-ee]
@@ -537,7 +537,7 @@ spec:
       workspaces:
         - name: source
           workspace: source
-    
+
     # 5. Generate SBOM
     - name: generate-sbom
       runAfter: [tag-with-sha]
@@ -551,7 +551,7 @@ spec:
       workspaces:
         - name: source
           workspace: source
-    
+
     # 6. Scan for vulnerabilities
     - name: scan-vulnerabilities
       runAfter: [generate-sbom]
@@ -565,7 +565,7 @@ spec:
       workspaces:
         - name: source
           workspace: source
-    
+
     # 7. Push to registry
     - name: push-image
       runAfter: [scan-vulnerabilities]
@@ -577,7 +577,7 @@ spec:
       workspaces:
         - name: dockerconfig
           workspace: dockerconfig
-    
+
     # 8. Create release manifest
     - name: create-manifest
       runAfter: [push-image]
@@ -591,7 +591,7 @@ spec:
       workspaces:
         - name: source
           workspace: source
-    
+
     # 9. Update AAP via CaC
     - name: update-aap-config
       runAfter: [create-manifest]

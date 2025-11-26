@@ -321,10 +321,18 @@ flowchart TD
 
 * Keep the core CaC definitions (e.g., structure of a JT) identical across environments.
 * Handle differences (e.g., SCM tags in Projects, Inventory names in JTs, Credential names) using a combination of:
-  * **Ansible Variables per AAP Environment:** Define an Ansible inventory for your AAP instances (e.g., \[aap\_dev\], \[aap\_prod\]). Use group\_vars/aap\_dev.yml, group\_vars/aap\_prod.yml, etc., within your CaC repository to set environment-specific overrides.[^68]
+  * **Ansible Variables per AAP Environment:** Define an Ansible inventory for your AAP instances (e.g., \[aap\_dev\], \[aap\_qa\], \[aap\_prod\]). Use group\_vars/aap\_dev.yml, group\_vars/aap\_qa.yml, group\_vars/aap\_prod.yml, etc., within your CaC repository to set environment-specific overrides.[^68]
+  * **Release Tag Variables:** When a release is created, update the environment-specific variables with the new release tags:
+    ```yaml
+    # group_vars/aap_qa.yml
+    code_tag: "qa-v1.1.0"  # Updated when QA release is created
+    ee_tag: "qa-v1.1.0"    # Updated when QA release is created
+    ee_image: "my-registry/my-ee:qa-v1.1.0"
+    ```
   * **AAP Object Name Referencing (Especially for Credentials):** Define AAP Credentials securely within each AAP instance. In your CaC definitions (e.g., for a Job Template), reference the *name* of the credential. AAP resolves this name to the actual credential specific to that AAP instance at runtime.[^68] This avoids storing sensitive details in the CaC code.
   * **Lookup Plugins (Optional):** Use Ansible lookup plugins like env or cloud parameter stores within CaC definitions for dynamic values.[^68]
 * Use **Ansible Vault** within the CaC repository *only* for secrets needed by the CaC playbook itself (e.g., an AAP service account password), not for the runtime credentials AAP uses.[^68]
+* **Tagging Strategy:** After updating the CaC repository with new release tags, tag the CaC repository with the same version (e.g., `qa-v1.1.0`). This creates an immutable snapshot of the configuration that matches the code and EE versions, enabling atomic rollbacks.
 
 ---
 
@@ -345,9 +353,15 @@ The phases described above work together to create a synchronized and controlled
    * The tagged EE image is pushed to your container registry (Automation Hub, Quay, etc.).[^115]
    * The AAP Job Template or Workflow for the target environment (QA/Prod) must be configured (often via CaC) to use this **specific, version-tagged EE image**.[^111] AAP will pull this exact image version when the job runs.[^120] Setting the pull policy appropriately (e.g., 'Always pull container' or 'Only pull if not present') ensures the correct image is used.[^121]
 4. **Synchronizing AAP Configuration (CaC):**
-   * The Configuration as Code (CaC) definitions for AAP (managed in a separate Git repo or the main one) also follow the same Git tagging strategy for promotion.[^68]
-   * When promoting a release to QA or Prod, the CaC definitions associated with that release tag are applied to the corresponding AAP instance (QA AAP or Prod AAP).
+   * The Configuration as Code (CaC) definitions for AAP are managed in a **separate Git repository** and can be updated independently via PR/MR workflow for infrastructure changes (new Job Templates, updated Workflows, etc.).[^68]
+   * When promoting a release to QA or Prod, the following sequence occurs:
+     * **Step 1**: Code repository is tagged (e.g., `qa-v1.1.0`)
+     * **Step 2**: EE image is built and tagged (e.g., `qa-v1.1.0`)
+     * **Step 3**: CaC repository is **updated** with the new code tag and EE tag in its environment-specific variables (e.g., `group_vars/aap_qa.yml` sets `code_tag: qa-v1.1.0` and `ee_tag: qa-v1.1.0`)
+     * **Step 4**: CaC repository is **tagged** with the same release version (e.g., `qa-v1.1.0`)
+     * **Step 5**: CaC playbook runs, checking out the CaC tag `qa-v1.1.0`, and applies the configuration to the AAP instance
    * These CaC definitions ensure that the AAP objects (Projects, Job Templates, Workflows, EE references) are configured correctly for that specific release tag. For example, the QA Job Template definition in CaC will point to the qa-vX.Y.Z Git tag in its Project configuration and the my-registry/my-ee:qa-vX.Y.Z image in its EE configuration.[^68]
+   * **Key Point**: The CaC repository maintains its own version history but is tagged with the same version as the code/EE release, ensuring all components are synchronized and can be rolled back together.
 5. **Orchestration with AAP Workflows:**
    * AAP Workflows are the engine that drives the synchronized promotion.[^114] A typical promotion workflow for QA might look like this:
      * **Trigger:** Manual launch or triggered by the creation of a qa-vX.Y.Z Git tag.

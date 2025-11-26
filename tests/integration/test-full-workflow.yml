@@ -239,7 +239,7 @@
 import yaml
 with open('{{ test_output_dir }}/release-test.yaml') as f:
     m = yaml.safe_load(f)
-    
+
 # Article III: Atomic Promotion
 assert len(m['components']['aap_configuration']['commit']) == 40, 'Full SHA required'
 assert len(m['components']['collections']['commit']) == 40, 'Full SHA required'

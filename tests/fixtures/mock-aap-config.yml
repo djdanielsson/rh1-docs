@@ -76,7 +76,7 @@ controller_templates:
 controller_execution_environments:
   - name: "Test EE"
     description: "Test execution environment"
-    image: "quay.io/ansible/awx-ee:latest"
+    image: "{{ aap_hostname }}/custom-ee:{{ tag }}"
     organization: "Test Organization"
 
 # Schedules

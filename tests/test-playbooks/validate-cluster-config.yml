@@ -102,7 +102,7 @@ with open('{{ item.path }}') as f:
       ansible.builtin.debug:
         msg: |
           ✅ Cluster Configuration Validation Complete
-          
+      
           Files validated: {{ yaml_files.files | length }}
           YAML syntax: ✅ All valid
           ArgoCD apps: ✅ Checked

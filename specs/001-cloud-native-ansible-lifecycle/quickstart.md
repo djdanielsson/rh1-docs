@@ -610,7 +610,7 @@ metadata:
     - New my_collection with my_role
     - Updated EE with required collections
     - AAP configuration for QA/Prod environments
-    
+
     Tested in Dev: 2025-10-27
     Approved for QA: 2025-10-27
 EOF

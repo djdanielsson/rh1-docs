@@ -155,18 +155,18 @@ sequenceDiagram
     GH->>GHA: Trigger tests
     GHA->>GHA: Run sanity/units/lint
     GHA-->>Dev: Test results
-    
+
     Dev->>GH: Create PR
     GHA->>GHA: Full test suite
     GHA-->>GH: Quality gates pass
-    
+
     Dev->>GH: Merge to main
     GH->>Tek: Trigger build pipeline
     Tek->>Tek: Build collection
     Tek->>Tek: Build EE
     Tek->>Tek: Create release manifest
     Tek->>GH: Store manifest in Git
-    
+
     GH->>Argo: Detect manifest change
     Argo->>AAP: Apply configuration
     AAP->>AAP: Run automation

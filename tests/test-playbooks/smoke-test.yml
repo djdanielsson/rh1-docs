@@ -138,17 +138,17 @@
     - name: Smoke test summary
       ansible.builtin.debug:
         msg: |
-          
+      
           🎉 Smoke Test Complete
           ======================
-          
+      
           Repositories:        5/5 ✅
           Pre-commit configs:  {{ precommit_configs.results | selectattr('stat.exists') | list | length }}/5 
           GitHub workflows:    {{ workflow_files.results | map(attribute='matched') | sum }} total
           Documentation:       {{ doc_files.results | selectattr('stat.exists') | list | length }}/{{ doc_files.results | length }}
           Required tools:      {{ tool_checks.results | selectattr('rc', 'equalto', 0) | list | length }}/{{ tool_checks.results | length }}
           Total files:         {{ total_files.matched }}
-          
+      
           Status: ✅ Platform structure is valid
 
 

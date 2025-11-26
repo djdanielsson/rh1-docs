@@ -442,7 +442,7 @@ Use PEP 8 with these tools:
 def manage_service(name: str, state: str, enabled: bool = None) -> dict:
     """
     Manage a system service.
-    
+
     Args:
         name: Service name
         state: Desired state (started/stopped)
@@ -452,11 +452,11 @@ def manage_service(name: str, state: str, enabled: bool = None) -> dict:
         dict: Result with changed status
     """
     result = {"changed": False, "name": name}
-    
+
     if state == "started":
         start_service(name)
         result["changed"] = True
-    
+
     return result
 
 
@@ -502,10 +502,10 @@ from ansible_collections.myorg.custom_collection.plugins.module_utils import hel
 def process_data(input_data: List[str], validate: bool = True) -> Dict[str, any]:
     """
     Process input data and return results.
-    
+
     This function takes a list of strings, optionally validates them,
     and returns a dictionary with processed results.
-    
+
     Args:
         input_data: List of strings to process
         validate: Whether to validate input (default: True)
@@ -525,7 +525,7 @@ def process_data(input_data: List[str], validate: bool = True) -> Dict[str, any]
     """
     if validate and not input_data:
         raise ValueError("input_data cannot be empty")
-    
+
     # Implementation
     pass
 ```
@@ -596,16 +596,16 @@ def run_module():
     module_args = dict(
         name=dict(type='str', required=True),
     )
-    
+
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True
     )
-    
+
     result = dict(
         changed=False,
     )
-    
+
     module.exit_json(**result)
 
 
@@ -641,9 +641,9 @@ set -o pipefail  # Catch errors in pipes
 # Good - Clear function definition
 function install_packages() {
     local package_list=("$@")
-    
+
     echo "Installing packages: ${package_list[*]}"
-    
+
     for package in "${package_list[@]}"; do
         if command -v "$package" &> /dev/null; then
             echo "✓ $package already installed"

@@ -500,7 +500,7 @@ class TestSampleFilter:
         
         result = filters['sample_filter']("test")
         assert result == "TEST"
-    
+
     def test_sample_filter_empty(self):
         """Test filter with empty input."""
         fm = FilterModule()
@@ -682,10 +682,10 @@ def test_sample_function():
     # Arrange
     input_data = "test"
     expected = "TEST"
-    
+
     # Act
     result = sample_function(input_data)
-    
+
     # Assert
     assert result == expected
 ```
@@ -698,7 +698,7 @@ class TestModule:
     def test_first(self):
         # Don't rely on test_second
         pass
-    
+
     def test_second(self):
         # Don't rely on test_first
         pass

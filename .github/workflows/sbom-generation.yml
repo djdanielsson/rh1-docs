@@ -33,7 +33,7 @@ jobs:
     name: Generate SBOM for Execution Environment
     runs-on: ubuntu-latest
     if: contains(github.event.head_commit.message, 'automation-ee') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -115,7 +115,7 @@ jobs:
     name: Generate SBOM for Collection
     runs-on: ubuntu-latest
     if: contains(github.event.head_commit.message, 'automation-collection') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -196,11 +196,11 @@ jobs:
     name: Dependency Review
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
+
     permissions:
       contents: read
       pull-requests: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -259,13 +259,13 @@ sequenceDiagram
 
     Dev->>GH: Merge PR to main
     GH->>Tek: Trigger build pipeline
-    
+
     Tek->>Tek: Build collection
     Tek->>Tek: Build EE image
     Tek->>Tek: Run tests
     Tek->>Reg: Publish artifacts
     Tek->>Tek: Create dev tag (dev-$SHA)
-    
+
     Tek->>AAP_D: Apply AAP config<br/>(via infra.aap_configuration)
     AAP_D->>AAP_D: Sync Project to dev tag
     AAP_D->>Reg: Pull EE image
@@ -287,18 +287,18 @@ sequenceDiagram
 
     QA_Lead->>GH: Create QA tag (qa-v1.1.0)
     GH->>Tek: Tag trigger → promotion pipeline
-    
+
     Tek->>Tek: Build EE (ee:qa-v1.1.0)
     Tek->>Tek: Create QA manifest
     Tek->>GH: Commit QA manifest
-    
+
     Tek->>AAP_Q: Apply AAP config<br/>(via infra.aap_configuration)
     AAP_Q->>AAP_Q: Sync Project to qa-v1.1.0
     AAP_Q->>AAP_Q: Pull EE ee:qa-v1.1.0
     AAP_Q->>AAP_Q: Run smoke tests
     AAP_Q-->>Tek: Config applied
     Tek-->>QA_Lead: QA deployment complete
-    
+
     QA_Lead->>AAP_Q: Execute full test suite
     AAP_Q-->>QA_Lead: Test results
     QA_Lead->>GH: Sign-off (approve for prod)
@@ -319,14 +319,14 @@ sequenceDiagram
 
     CAB->>GH: Approve prod tag (prod-v1.0.0)
     GH->>Tek: Tag trigger → prod pipeline
-    
+
     Tek->>Tek: Validate QA manifest
     Tek->>Tek: Build EE (ee:prod-v1.0.0)
     Tek->>Backup: Create backup/snapshot
     Backup-->>Tek: Backup ID
     Tek->>Tek: Create prod manifest
     Tek->>GH: Commit prod manifest
-    
+
     Tek->>AAP_P: Apply AAP config<br/>(via infra.aap_configuration)
     AAP_P->>AAP_P: Sync Project to prod-v1.0.0
     AAP_P->>AAP_P: Pull EE ee:prod-v1.0.0
@@ -371,7 +371,7 @@ sequenceDiagram
 
     Ops->>GH: Trigger rollback pipeline
     GH->>Tek: Start rollback job
-    
+
     Tek->>Tek: Identify previous manifest
     Tek->>AAP: Apply previous AAP config<br/>(via infra.aap_configuration)
     AAP->>AAP: Sync Project to previous tag
@@ -433,7 +433,7 @@ graph TB
 ```mermaid
 timeline
     title Release Version Progression
-    
+
     section Development
         Commit abc123 : Feature developed
                       : Tests pass
@@ -681,19 +681,19 @@ sequenceDiagram
     Green->>Green: Deploy new version
     Green->>Green: Run health checks
     Green-->>Monitor: Health: OK
-    
+
     Monitor->>LB: Begin traffic shift
     LB->>Green: 10% traffic
     Monitor->>Monitor: Monitor metrics
     LB->>Green: 50% traffic
     Monitor->>Monitor: Monitor metrics
     LB->>Green: 100% traffic
-    
+
     Note over Blue,Green: New: Green serving traffic
-    
+
     Blue->>Blue: Keep running (rollback ready)
     Monitor->>Monitor: Monitor for 24h
-    
+
     alt Deployment Successful
         Blue->>Blue: Shut down old version
     else Issue Detected

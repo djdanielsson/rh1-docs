@@ -554,7 +554,7 @@ stateDiagram-v2
     QAValidated --> ProdTag: CAB approval
     ProdTag --> ProdDeployed: Deploy to Prod
     ProdDeployed --> [*]: Release complete
-    
+
     ProdDeployed --> Rollback: Issues detected
     Rollback --> PreviousProdTag: Revert to previous tag
     PreviousProdTag --> [*]: Rollback complete
