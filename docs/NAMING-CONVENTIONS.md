@@ -325,7 +325,7 @@ CONTROLLER_HOST
 tasks/
   main.yml              # Main task list
   install.yml           # Installation tasks
-  configure.yml         # Configuration tasks  
+  configure.yml         # Configuration tasks
   validate.yml          # Validation tasks
   cleanup.yml           # Cleanup tasks
 ```
@@ -506,7 +506,7 @@ config
 ```
 # Format: {Environment}
 Production
-Staging  
+Staging
 Development
 Test
 
@@ -837,7 +837,7 @@ config.yml
 template.j2
 script.sh
 
-# Good  
+# Good
 webserver-config.yml
 httpd-template.j2
 backup-database.sh
@@ -891,8 +891,8 @@ See `.pre-commit-config.yaml` for automated naming validation.
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2025-10-30  
+**Version**: 1.0
+**Last Updated**: 2025-10-30
 **Status**: ✅ Approved and enforced
 
 

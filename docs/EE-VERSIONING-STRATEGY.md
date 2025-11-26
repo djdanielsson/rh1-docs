@@ -412,7 +412,7 @@ testing:
   integration_tests: "passed"
   molecule_tests: "passed"
   security_scan: "passed"
-  
+
 approvals:
   - approver: "qa-lead@example.com"
     approved_at: "2025-01-04T14:30:00Z"
@@ -448,7 +448,7 @@ spec:
       default: "quay.io/myorg"
     - name: image-name
       default: "automation-ee"
-      
+
   workspaces:
     - name: source
     - name: dockerconfig
@@ -521,11 +521,11 @@ spec:
               cd $(workspaces.source.path)
               COMMIT_SHA=$(git rev-parse HEAD)
               SHA_TAG="$(params.registry)/$(params.name):sha-${COMMIT_SHA}"
-              
+
               podman tag \
                 "$(params.image)" \
                 "${SHA_TAG}"
-              
+
               echo "✅ Tagged: ${SHA_TAG}"
       params:
         - name: image
@@ -623,15 +623,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install ansible-builder
         run: pip install ansible-builder
-      
+
       - name: Validate execution-environment.yml
         working-directory: automation-ee-example
         run: |
           ansible-builder create --verbosity 3
-          
+
       - name: Check for version pinning
         working-directory: automation-ee-example
         run: |
@@ -640,13 +640,13 @@ jobs:
             echo "❌ Found unpinned collections"
             exit 1
           fi
-          
+
           # Verify all Python packages are version-pinned
           if grep -E "^[a-z]+-*[a-z]*$" requirements.txt 2>/dev/null; then
             echo "❌ Found unpinned Python packages"
             exit 1
           fi
-          
+
           echo "✅ All dependencies are version-pinned"
 ```
 
@@ -898,7 +898,7 @@ podman push ee:prod-v1.0.0
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2025-01-04  
+**Version**: 1.0
+**Last Updated**: 2025-01-04
 **Constitutional Compliance**: ✅ Article III (Atomic Promotion), Article IV (Production-Grade Quality)
 

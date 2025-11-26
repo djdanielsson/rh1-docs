@@ -677,8 +677,8 @@ Every workflow enforces:
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2025-10-30  
+**Version**: 1.0
+**Last Updated**: 2025-10-30
 **Maintained By**: Platform Team
 
 

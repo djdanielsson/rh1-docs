@@ -601,15 +601,15 @@ pre-commit autoupdate
 - name: Validate Release Manifest
   run: |
     ./scripts/validate-manifest-schema.py releases/release-${VERSION}.yaml
-  
+
 - name: Generate SBOM
   run: |
     syft ${{ env.IMAGE_NAME }} -o spdx-json > sbom.json
-  
+
 - name: Scan Vulnerabilities
   run: |
     grype ${{ env.IMAGE_NAME }} --fail-on high
-  
+
 - name: Upload to Security
   uses: github/codeql-action/upload-sarif@v3
   with:

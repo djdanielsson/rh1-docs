@@ -21,7 +21,7 @@ Comprehensive code style standards for YAML, Python, and all other languages use
 Based on the **Zen of Ansible** by Tim Appnel:
 
 1. **Consistency**: Follow established patterns
-2. **Readability**: Code is read more than written  
+2. **Readability**: Code is read more than written
 3. **Simplicity**: Prefer simple over clever
 4. **Maintainability**: Think of future maintainers
 5. **Declarative Over Imperative**: Most of the time
@@ -217,39 +217,39 @@ enabled: yes  # Avoid, use true/false
   hosts: target_hosts
   become: true  # If needed
   gather_facts: true  # Default, but explicit is good
-  
+
   vars:
     # Playbook variables
     app_version: "1.0.0"
-  
+
   vars_files:
     # External variable files
     - vars/common.yml
-  
+
   pre_tasks:
     # Tasks before roles
     - name: Update cache
       ansible.builtin.apt:
         update_cache: true
-  
+
   roles:
     # Roles to apply
     - role: webserver
       webserver_port: 80
-  
+
   tasks:
     # Main tasks
     - name: Deploy application
       ansible.builtin.copy:
         src: app.jar
         dest: /opt/app/
-  
+
   post_tasks:
     # Tasks after roles
     - name: Verify deployment
       ansible.builtin.uri:
         url: http://localhost
-  
+
   handlers:
     # Handlers for this playbook
     - name: restart application
@@ -447,7 +447,7 @@ def manage_service(name: str, state: str, enabled: bool = None) -> dict:
         name: Service name
         state: Desired state (started/stopped)
         enabled: Enable on boot
-        
+
     Returns:
         dict: Result with changed status
     """
@@ -509,16 +509,16 @@ def process_data(input_data: List[str], validate: bool = True) -> Dict[str, any]
     Args:
         input_data: List of strings to process
         validate: Whether to validate input (default: True)
-        
+
     Returns:
         dict: Processed results with keys:
             - success (bool): Whether processing succeeded
             - data (list): Processed data items
             - errors (list): Any errors encountered
-            
+
     Raises:
         ValueError: If input_data is empty and validate is True
-        
+
     Example:
         >>> process_data(['item1', 'item2'])
         {'success': True, 'data': ['item1', 'item2'], 'errors': []}
@@ -826,7 +826,7 @@ Platform Team
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2025-10-30  
+**Version**: 1.0
+**Last Updated**: 2025-10-30
 **Status**: ✅ Enforced via linters and pre-commit hooks
 

@@ -116,7 +116,7 @@ if [ -d "automation-collection-example/tests" ]; then
     if command -v pytest &> /dev/null; then
         run_test "Python Unit Tests" \
             "cd automation-collection-example && pytest tests/unit/ -v" || true
-        
+
         run_test "Python Integration Tests" \
             "cd automation-collection-example && pytest tests/integration/ -v" || true
     else

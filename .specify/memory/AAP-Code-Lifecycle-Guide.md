@@ -275,7 +275,7 @@ This guide is based on best practices from official Red Hat and Ansible document
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: 2025-01-04  
+**Document Version**: 1.0
+**Last Updated**: 2025-01-04
 **Maintained By**: Platform Engineering Team
 

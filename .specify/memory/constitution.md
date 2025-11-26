@@ -118,6 +118,6 @@ This constitution can only be amended through:
 
 ---
 
-**Ratified**: 2025-10-27  
+**Ratified**: 2025-10-27
 **Last Amended**: 2025-10-29
 

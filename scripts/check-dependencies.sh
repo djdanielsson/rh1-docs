@@ -69,7 +69,7 @@ check_ansible_deps() {
     if command -v ansible-galaxy &> /dev/null; then
         echo "  → Installing collections..."
         ansible-galaxy collection install -r requirements.yml --force > /dev/null 2>&1
-        
+
         echo "  → Installed collections:"
         ansible-galaxy collection list | grep -v "^#" | head -20
     else

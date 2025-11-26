@@ -286,7 +286,7 @@ flowchart TD
 
 ### Phase 4: Deploy & Orchestrate (Green)
 - **Dev Environment**: Syncs main branch for continuous testing
-- **QA Environment**: 
+- **QA Environment**:
   - Uses tagged releases (qa-vX.Y.Z)
   - Synchronized EE images
   - Approval gates
@@ -309,7 +309,7 @@ flowchart TD
 1. **Git Tags**: Immutable release markers (qa-v1.1.0, prod-v1.0.0)
 2. **EE Images**: Version-tagged to match Git tags
 3. **AAP Projects**: Point to specific Git tags per environment
-4. **CaC Repository**: 
+4. **CaC Repository**:
    - Updated with code/EE tags when release is created
    - Tagged with same release version (qa-v1.1.0, prod-v1.0.0)
    - Applied to AAP to configure Projects, JTs, EEs for that release
@@ -330,11 +330,11 @@ When a release tag is created (e.g., `qa-v1.1.0`):
 
 1. **Code Repository**: Tagged with `qa-v1.1.0`
 2. **EE Repository**: Built and tagged with `qa-v1.1.0`
-3. **CaC Repository**: 
+3. **CaC Repository**:
    - Updated to reference code tag `qa-v1.1.0` and EE tag `qa-v1.1.0`
    - Committed to main branch
    - Tagged with `qa-v1.1.0` (same version as code/EE)
-4. **CaC Application**: 
+4. **CaC Application**:
    - Playbook runs using CaC tag `qa-v1.1.0`
    - Applies configuration to AAP instance
    - Configures Projects to use code tag `qa-v1.1.0`
@@ -388,12 +388,12 @@ flowchart TD
 **On Release:**
 1. **Code Release**: Code repository tagged (e.g., `qa-v1.1.0`)
 2. **EE Release**: EE image built and tagged (e.g., `qa-v1.1.0`)
-3. **CaC Update**: 
+3. **CaC Update**:
    - CaC repository updated with new code/EE tags
    - Variables updated: `code_tag`, `ee_tag`, `ee_image`
    - Committed to CaC main branch
 4. **CaC Tag**: CaC repository tagged with same version (`qa-v1.1.0`)
-5. **CaC Apply**: 
+5. **CaC Apply**:
    - CaC playbook runs, checking out CaC tag `qa-v1.1.0`
    - Applies configuration to AAP instance
    - Updates Projects to use code tag `qa-v1.1.0`

@@ -1,7 +1,7 @@
 # Quickstart Guide: Cloud-Native Ansible Lifecycle
 
-**Purpose**: Complete bootstrap and operational guide for the GitOps Ansible platform  
-**Audience**: Platform operators, release managers, developers  
+**Purpose**: Complete bootstrap and operational guide for the GitOps Ansible platform
+**Audience**: Platform operators, release managers, developers
 **Prerequisites**: OpenShift cluster admin access
 
 ---
@@ -595,7 +595,7 @@ components:
   # Required components
   aap_configuration: "${AAP_CAC_SHA}"
   execution_environment: "${EE_SHA}"
-  
+
   # Application components
   my_new_collection: "${COLLECTION_SHA}"
 
@@ -1033,8 +1033,8 @@ oc get pipelineruns -n dev-tools -o json > pipelinerun-audit.json
 
 ---
 
-**Quickstart Version**: 1.0.0  
-**Last Updated**: 2025-10-27  
+**Quickstart Version**: 1.0.0
+**Last Updated**: 2025-10-27
 **Next Review**: After first production deployment
 
 **Questions/Issues**: File issue in `cluster-config` repository

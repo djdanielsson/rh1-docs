@@ -438,7 +438,7 @@ timeline
         Commit abc123 : Feature developed
                       : Tests pass
                       : Merge to main
-        
+
         Dev Deploy : release-dev-20250104-abc123
                    : collection: 1.0.0-dev+abc123
                    : ee-image: latest-dev
@@ -448,7 +448,7 @@ timeline
                      : collection: 1.0.0
                      : ee-image: 1.0.0
                      : Immutable versions
-        
+
         QA Testing : Integration tests
                    : Security scans
                    : QA sign-off
@@ -458,7 +458,7 @@ timeline
                        : collection: 1.0.0
                        : ee-image: 1.0.0
                        : CAB approval
-        
+
         Prod Deploy : Blue-green deployment
                     : Health verification
                     : Traffic switch
@@ -574,7 +574,7 @@ stateDiagram-v2
         - Apply AAP config (CaC)
         - Sync AAP Projects
         - Update Job Templates
-        
+
         ArgoCD manages:
         - AAP operator
         - Platform resources

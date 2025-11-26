@@ -686,7 +686,7 @@ AAP Projects configured per environment:
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2025-01-04  
+**Version**: 1.0
+**Last Updated**: 2025-01-04
 **Constitutional Compliance**: ✅ Article I (GitOps First), Article III (Atomic Promotion)
 

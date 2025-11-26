@@ -128,7 +128,7 @@
           "labels.yml"
           "credential_types.yml"
         )
-    
+
         for file in "{{ item.path }}"; do
           basename=$(basename "$file")
           if [[ ! " ${valid_files[@]} " =~ " ${basename} " ]]; then
@@ -159,7 +159,7 @@
       ansible.builtin.debug:
         msg: |
           ✅ AAP Configuration Validation Complete
-      
+
           Files validated: {{ group_vars_files.files | length }}
           YAML syntax: ✅ All valid
           Inventory: ✅ Valid

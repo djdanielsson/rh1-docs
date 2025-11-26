@@ -137,12 +137,12 @@
               repository: "https://github.com/djdanielsson/rh1-aap-config-as-code.git"
               commit: "{{ mock_aap_config_sha }}"
               branch: "main"
-            
+
             collections:
               repository: "https://github.com/djdanielsson/rh1-custom-collection.git"
               commit: "{{ mock_collection_sha }}"
               branch: "main"
-            
+
             execution_environment:
               registry: "quay.io"
               repository: "myorg/custom-ee"
@@ -268,10 +268,10 @@ print('Constitutional compliance verified')
     - name: Full workflow test summary
       ansible.builtin.debug:
         msg: |
-          
+
           🎉 Full Workflow Integration Test Complete
           ==========================================
-          
+
           ✅ STAGE 1: Collection Development - PASSED
           ✅ STAGE 2: EE Build - PASSED
           ✅ STAGE 3: AAP Configuration - PASSED
@@ -279,7 +279,7 @@ print('Constitutional compliance verified')
           ✅ STAGE 5: Kubernetes Resources - PASSED
           ✅ STAGE 6: Security Validation - PASSED
           ✅ STAGE 7: Constitutional Compliance - PASSED
-          
+
           All workflow stages completed successfully!
           Platform is ready for GitOps deployment.
 

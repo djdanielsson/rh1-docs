@@ -1,7 +1,7 @@
 # Cloud-Native Ansible Lifecycle - Feature Specification
 
-**Feature ID**: 001  
-**Status**: Implementation Phase  
+**Feature ID**: 001
+**Status**: Implementation Phase
 **Created**: 2025-10-27
 **Updated**: 2025-10-29
 
@@ -34,19 +34,19 @@ Building a production-grade, end-to-end CI/CD and GitOps framework for Ansible a
 - **`cluster-config/`** - Platform GitOps (ArgoCD)
   - Location: https://github.com/djdanielsson/rh1-cluster-config.git
   - Purpose: Deploy AAP, Tekton, RBAC on OpenShift
-  
+
 - **`aap-config-as-code/`** - Application GitOps (Tekton)
   - Location: https://github.com/djdanielsson/rh1-aap-config-as-code.git
   - Purpose: Configure AAP via infra.aap_configuration collection
-  
+
 - **`automation-collection-example/`** - Ansible Collection template
   - Location: https://github.com/djdanielsson/rh1-custom-collection.git
   - Purpose: Custom Ansible collection with roles, modules, playbooks
-  
+
 - **`automation-ee-example/`** - Execution Environment template
   - Location: https://github.com/djdanielsson/rh1-custom-ee.git
   - Purpose: Container image with Ansible + dependencies
-  
+
 - **`automation-release-manifest/`** - Release Bill of Materials
   - Location: https://github.com/djdanielsson/rh1-release-manifest.git
   - Purpose: Version-lock all components for atomic promotion
@@ -143,6 +143,6 @@ rh1_ansible_code_lifecycle/              # Project workspace (not a git repo)
 
 ---
 
-**Maintained by**: Infrastructure Team  
+**Maintained by**: Infrastructure Team
 **Last Updated**: 2025-10-29
 

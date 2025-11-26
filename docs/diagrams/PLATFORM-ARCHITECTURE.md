@@ -97,7 +97,7 @@ graph TB
 ### 🔵 Developer Workstation
 - **Purpose**: Local development and testing
 - **Tools**: VS Code/Cursor with Dev Containers
-- **Activities**: 
+- **Activities**:
   - Write Ansible content (roles, playbooks, modules)
   - Test locally with Molecule
   - Commit and push to Git
@@ -111,7 +111,7 @@ graph TB
 
 ### 🔴 ArgoCD (Platform Loop)
 - **Purpose**: GitOps-based cluster configuration
-- **Scope**: 
+- **Scope**:
   - Kubernetes resources
   - AAP instance deployments
   - Operators and CRDs
@@ -132,7 +132,7 @@ graph TB
 - **Purpose**: Run automation workloads
 - **Environments**:
   - **Dev**: Development and feature testing
-  - **QA**: Integration and validation testing  
+  - **QA**: Integration and validation testing
   - **Prod**: Production automation execution
 - **Configuration**: Managed as code via aap-config-as-code repo
 

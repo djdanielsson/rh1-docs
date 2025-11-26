@@ -442,6 +442,6 @@ jobs:
 
 ---
 
-**Version**: 2.0 (Consolidated)  
+**Version**: 2.0 (Consolidated)
 **Last Updated**: 2025-01-04
 

@@ -166,7 +166,7 @@ Build a production-grade, end-to-end CI/CD and GitOps framework for Ansible auto
 
 ---
 
-**Version**: 1.0  
-**Status**: Implementation Phase  
+**Version**: 1.0
+**Status**: Implementation Phase
 **Last Updated**: 2025-10-29
 

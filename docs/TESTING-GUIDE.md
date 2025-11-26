@@ -131,7 +131,7 @@ pytest tests/unit/ -v --cov=plugins --cov-report=term
 
 **Purpose**: Test component interactions
 
-**Location**: 
+**Location**:
 - `automation-collection-example/tests/integration/`
 - `tests/integration/`
 
@@ -497,7 +497,7 @@ class TestSampleFilter:
         """Test basic filter functionality."""
         fm = FilterModule()
         filters = fm.filters()
-        
+
         result = filters['sample_filter']("test")
         assert result == "TEST"
 
@@ -505,7 +505,7 @@ class TestSampleFilter:
         """Test filter with empty input."""
         fm = FilterModule()
         filters = fm.filters()
-        
+
         with pytest.raises(ValueError):
             filters['sample_filter']("")
 ```
@@ -725,8 +725,8 @@ def test_with_fixture(sample_config):
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2025-10-30  
+**Version**: 1.0
+**Last Updated**: 2025-10-30
 **Maintained By**: Platform Team
 
 

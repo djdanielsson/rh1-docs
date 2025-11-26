@@ -40,16 +40,16 @@ for repo in "${repos[@]}"; do
   echo "----------------------------------------------------------------------"
   echo "Repository: $repo"
   echo "----------------------------------------------------------------------"
-  
+
   if [ ! -d "$repo" ]; then
     echo "⚠️  Directory not found, skipping"
     echo ""
     skip_count=$((skip_count + 1))
     continue
   fi
-  
+
   cd "$repo"
-  
+
   # Check if .pre-commit-config.yaml exists
   if [ ! -f ".pre-commit-config.yaml" ]; then
     echo "⚠️  .pre-commit-config.yaml not found, skipping"
@@ -57,7 +57,7 @@ for repo in "${repos[@]}"; do
     skip_count=$((skip_count + 1))
     continue
   fi
-  
+
   # Install hooks
   echo "Installing pre-commit hooks..."
   if pre-commit install; then
@@ -67,11 +67,11 @@ for repo in "${repos[@]}"; do
     echo "❌ Failed to install pre-commit hooks"
     fail_count=$((fail_count + 1))
   fi
-  
+
   # Optional: Install commit-msg and pre-push hooks
   # pre-commit install --hook-type commit-msg
   # pre-commit install --hook-type pre-push
-  
+
   cd ..
   echo ""
 done

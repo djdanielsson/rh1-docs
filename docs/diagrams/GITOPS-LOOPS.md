@@ -374,7 +374,7 @@ sequenceDiagram
     loop Every 3 Minutes
         Argo->>Git: Fetch latest commit
         Argo->>Argo: Compare Git SHA
-        
+
         alt Configuration Changed
             Argo->>K8s: Calculate diff
             Argo->>K8s: Apply changes
@@ -475,10 +475,10 @@ graph TB
         CODE[Code Change]
         TEST[GitHub Actions<br/>Quality Gates]
         MERGE[Merge to Main]
-        
+
         BUILD[Tekton Build<br/>Application Loop]
         MANIFEST[Release Manifest]
-        
+
         SYNC[ArgoCD Sync<br/>Platform Loop]
         DEPLOY[Deployment]
     end

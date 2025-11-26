@@ -95,7 +95,7 @@ collections:
   hosts: aap_dev
   connection: local
   gather_facts: false
-  
+
   tasks:
     - name: Apply AAP Configuration
       ansible.builtin.include_role:
@@ -278,7 +278,7 @@ spec:
       description: "Target environment (dev, qa, prod)"
     - name: git-revision
       description: "Git tag to apply (e.g., qa-v1.1.0)"
-  
+
   tasks:
     - name: git-clone
       taskRef:
@@ -352,7 +352,7 @@ controller_credentials:
       username: "ansible"
       # ✅ GOOD: Reference environment variable
       ssh_key_data: "{{ lookup('env', 'SSH_PRIVATE_KEY_DEV') }}"
-      
+
       # ❌ BAD: Hardcoded secret
       # ssh_key_data: "-----BEGIN RSA PRIVATE KEY-----..."
 ```
@@ -494,7 +494,7 @@ controller_workflow_job_templates:
 6. Job Templates
 7. Workflows
 
-**Reference**: 
+**Reference**:
 - [Red Hat CoP - infra.aap_configuration](https://github.com/redhat-cop/aap_configuration)
 - [Collection Documentation](https://ansible.readthedocs.io/projects/aap-configuration/)
 - [Red Hat CoP - AAP Configuration Examples](https://redhat-cop.github.io/automation-good-practices/#_ansible_automation_platform_configuration_as_code)
@@ -792,7 +792,7 @@ controller_groups:
     variables:
       ansible_user: "svc_ansible"
       webserver_port: 443
-      
+
   - name: "databases"
     inventory: "Production Infrastructure"
     variables:
@@ -859,7 +859,7 @@ ansible-inventory -i inventory_script.py --list
 7. ✅ **Cache appropriately** - Balance freshness vs. API load
 8. ✅ **Separate credentials per environment** - Security isolation
 
-**Reference**: 
+**Reference**:
 - [Red Hat CoP - Inventory Best Practices](https://redhat-cop.github.io/automation-good-practices/)
 - [OpenShift Virtualization Inventory Plugin](https://docs.ansible.com/ansible/latest/collections/kubevirt/core/kubevirt_inventory.html)
 - [AAP Inventory Sources](https://docs.ansible.com/automation-controller/latest/html/userguide/inventories.html)
@@ -1120,7 +1120,7 @@ webserver_package_map:
 
 **Ansible-lint**: [command-instead-of-module](https://ansible.readthedocs.io/projects/lint/rules/command-instead-of-module/)
 
-**Why**: 
+**Why**:
 - Better idempotency
 - Better error handling
 - Clearer intent
@@ -1578,13 +1578,13 @@ argument_specs:
         required: false
         default: 80
         description: HTTP port number
-      
+
       webserver_ssl_enabled:
         type: bool
         required: false
         default: false
         description: Enable SSL/TLS
-      
+
       webserver_packages:
         type: list
         elements: str
@@ -1975,9 +1975,9 @@ Before committing code, verify:
 
 ---
 
-**Version**: 2.0  
-**Last Updated**: 2025-10-30  
-**Status**: ✅ Aligned with Red Hat CoP and ansible-lint rules  
+**Version**: 2.0
+**Last Updated**: 2025-10-30
+**Status**: ✅ Aligned with Red Hat CoP and ansible-lint rules
 **References**: Red Hat CoP, ansible-lint, Ansible official docs
 
 
