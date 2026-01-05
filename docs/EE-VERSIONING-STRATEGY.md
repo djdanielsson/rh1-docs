@@ -2,18 +2,20 @@
 
 **Immutable, Version-Locked EE Images Synchronized with Code Releases**
 
+**Version Format**: YY.MM.DD.PATCH (Calendar Versioning)
+
 ---
 
 ## 🎯 Overview
 
-Execution Environments (EE) must be **version-locked** to match code release tags, ensuring that Ansible playbooks and their runtime dependencies are always synchronized.
+Execution Environments (EE) must be **version-locked** using **YY.MM.DD.PATCH** format to match code release tags, ensuring that Ansible playbooks and their runtime dependencies are always synchronized.
 
 ### Core Principle
 
-> **Every code release tag has a corresponding EE image tag**
+> **Every code release tag has a corresponding EE image tag using YY.MM.DD.PATCH format**
 
 ```
-Code Tag: qa-v1.1.0  →  EE Image: my-registry/my-ee:qa-v1.1.0
+Code Tag: qa-25.01.05.0  →  EE Image: my-registry/my-ee:25.01.05.0
 ```
 
 **Benefits**:
@@ -45,15 +47,17 @@ Code Tag: qa-v1.1.0  →  EE Image: my-registry/my-ee:qa-v1.1.0
 
 | Environment | Code Tag | EE Image Tag | Example |
 |-------------|----------|--------------|---------|
-| **Development** | `dev-<short-sha>` | `ee:dev-<short-sha>` | `quay.io/myorg/automation-ee:dev-abc123` |
-| **QA** | `qa-v<major>.<minor>.<patch>` | `ee:qa-v<major>.<minor>.<patch>` | `quay.io/myorg/automation-ee:qa-v1.1.0` |
-| **Production** | `prod-v<major>.<minor>.<patch>` | `ee:prod-v<major>.<minor>.<patch>` | `quay.io/myorg/automation-ee:prod-v1.0.0` |
+| **Development** | `dev-YY.MM.DD.PATCH-<sha>` | `ee:YY.MM.DD.PATCH` | `quay.io/myorg/automation-ee:25.01.05.0` |
+| **QA** | `qa-YY.MM.DD.PATCH` | `ee:YY.MM.DD.PATCH` | `quay.io/myorg/automation-ee:25.01.05.0` |
+| **Production** | `prod-YY.MM.DD.PATCH` | `ee:YY.MM.DD.PATCH` | `quay.io/myorg/automation-ee:25.01.05.0` |
+
+**Note**: EE images use the version without environment prefix.
 
 ### Additional Tags
 
 ```bash
 # Primary version tag (immutable)
-quay.io/myorg/automation-ee:prod-v1.0.0
+quay.io/myorg/automation-ee:25.01.05.0
 
 # Git commit SHA for traceability
 quay.io/myorg/automation-ee:sha-abc123def456
@@ -64,7 +68,7 @@ quay.io/myorg/automation-ee:dev-latest      # ⚠️ Dev only, never use in QA/P
 
 ### Tag Immutability Rules
 
-- ✅ **Environment tags** (`qa-v*`, `prod-v*`): **IMMUTABLE** - never overwritten
+- ✅ **Version tags** (`YY.MM.DD.PATCH`): **IMMUTABLE** - never overwritten
 - ✅ **SHA tags** (`sha-*`): **IMMUTABLE** - permanent record
 - ⚠️ **Convenience tags** (`dev-latest`): **MUTABLE** - dev environment only
 - ❌ **Never use** `latest` in QA or Production
@@ -81,39 +85,43 @@ quay.io/myorg/automation-ee:dev-latest      # ⚠️ Dev only, never use in QA/P
 #!/bin/bash
 # Triggered by Tekton pipeline on merge to main
 
-# Get short commit SHA
-COMMIT_SHA=$(git rev-parse --short HEAD)
-DEV_TAG="dev-${COMMIT_SHA}"
+# Get version
+VERSION=$(date +"%y.%m.%d").0
+SHA=$(git rev-parse --short HEAD)
+DEV_TAG="dev-${VERSION}-${SHA}"
 
 # Build EE with dev tag
 cd automation-ee-example
 ansible-builder build \
-  --tag "quay.io/myorg/automation-ee:${DEV_TAG}" \
+  --tag "quay.io/myorg/automation-ee:${VERSION}" \
   --tag "quay.io/myorg/automation-ee:sha-$(git rev-parse HEAD)" \
   --tag "quay.io/myorg/automation-ee:dev-latest" \
   --container-runtime podman
 
 # Push to registry
-podman push "quay.io/myorg/automation-ee:${DEV_TAG}"
+podman push "quay.io/myorg/automation-ee:${VERSION}"
 podman push "quay.io/myorg/automation-ee:sha-$(git rev-parse HEAD)"
 podman push "quay.io/myorg/automation-ee:dev-latest"
 
-echo "✅ Built and pushed EE: ${DEV_TAG}"
+echo "✅ Built and pushed EE: ${VERSION}"
 ```
 
 ### 2. QA Build (Manual Trigger)
 
-**Trigger**: Git tag creation (`qa-v*`)
+**Trigger**: Git tag creation (`qa-YY.MM.DD.PATCH`)
 
 ```bash
 #!/bin/bash
 # Triggered by Tekton pipeline on git tag creation
 
-# Extract tag from git (e.g., qa-v1.1.0)
+# Extract tag from git (e.g., qa-25.01.05.0)
 QA_TAG="${1}"  # Passed from Tekton trigger
 
+# Extract version from tag (remove qa- prefix)
+VERSION="${QA_TAG#qa-}"
+
 # Validate tag format
-if [[ ! "${QA_TAG}" =~ ^qa-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ ! "${VERSION}" =~ ^[0-9]{2}\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01])\.[0-9]+$ ]]; then
   echo "❌ Invalid QA tag format: ${QA_TAG}"
   exit 1
 fi
@@ -122,22 +130,22 @@ fi
 git checkout "${QA_TAG}"
 COMMIT_SHA=$(git rev-parse HEAD)
 
-# Build EE with QA tag
+# Build EE with version tag
 cd automation-ee-example
 ansible-builder build \
-  --tag "quay.io/myorg/automation-ee:${QA_TAG}" \
+  --tag "quay.io/myorg/automation-ee:${VERSION}" \
   --tag "quay.io/myorg/automation-ee:sha-${COMMIT_SHA}" \
   --container-runtime podman
 
 # Get image digest for immutability tracking
-IMAGE_DIGEST=$(podman inspect "quay.io/myorg/automation-ee:${QA_TAG}" \
+IMAGE_DIGEST=$(podman inspect "quay.io/myorg/automation-ee:${VERSION}" \
   --format '{{.Digest}}')
 
 # Push to registry
-podman push "quay.io/myorg/automation-ee:${QA_TAG}"
+podman push "quay.io/myorg/automation-ee:${VERSION}"
 podman push "quay.io/myorg/automation-ee:sha-${COMMIT_SHA}"
 
-echo "✅ Built and pushed EE: ${QA_TAG}"
+echo "✅ Built and pushed EE: ${VERSION}"
 echo "📦 Image Digest: ${IMAGE_DIGEST}"
 ```
 

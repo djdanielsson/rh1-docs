@@ -28,19 +28,15 @@ gitGraph
     commit id: "Add webserver role"
     commit id: "Add tests"
     checkout main
-    merge feature/add-webserver tag: "dev-abc123"
+    merge feature/add-webserver
     commit id: "Deploy to dev" type: HIGHLIGHT
-    branch release/qa
-    checkout release/qa
-    commit id: "QA validation" tag: "qa-v1.1.0"
-    checkout main
-    merge release/qa
-    branch release/prod
-    checkout release/prod
-    commit id: "Prod approval" tag: "prod-v1.0.0"
-    checkout main
-    merge release/prod
+    commit id: "Dev validated" tag: "25.01.05.0"
+    commit id: "QA validated"
+    commit id: "Prod deployed"
+    commit id: "Hotfix" tag: "25.01.05.1"
 ```
+
+> **Note**: This platform uses **CalVer (YY.MM.DD.PATCH)** versioning. The same tag promotes through all environments (dev → qa → prod). See [VERSIONING-STRATEGY.md](./VERSIONING-STRATEGY.md) for details.
 
 ---
 
@@ -118,8 +114,8 @@ git branch -d feature/add-monitoring
 
 **Special Workflow**:
 ```bash
-# Branch from production tag
-git checkout -b hotfix/critical-security-fix prod-v1.0.0
+# Branch from previous release tag
+git checkout -b hotfix/critical-security-fix 25.01.05.0
 
 # Fix the issue
 git commit -m "fix: patch critical security vulnerability"
@@ -128,12 +124,11 @@ git commit -m "fix: patch critical security vulnerability"
 git checkout main
 git merge hotfix/critical-security-fix
 
-# Tag for all environments
-git tag -a qa-v1.0.1 -m "Hotfix: security patch"
-git tag -a prod-v1.0.1 -m "Hotfix: security patch"
+# Create hotfix tag (increment PATCH)
+git tag -a 25.01.05.1 -m "Hotfix: security patch"
 
-# Push tags
-git push origin qa-v1.0.1 prod-v1.0.1
+# Push tag (same tag promotes through all environments)
+git push origin 25.01.05.1
 ```
 
 ---
@@ -142,31 +137,33 @@ git push origin qa-v1.0.1 prod-v1.0.1
 
 ### Tag Naming Convention
 
-| Environment | Tag Format | Example | Purpose |
-|-------------|------------|---------|---------|
-| **Development** | `dev-<commit-sha>` | `dev-abc1234` | Automatic dev deployments |
-| **QA** | `qa-v<major>.<minor>.<patch>` | `qa-v1.1.0` | QA testing release |
-| **Production** | `prod-v<major>.<minor>.<patch>` | `prod-v1.0.0` | Production release |
+**Version Format**: `YY.MM.DD.PATCH` (Calendar Versioning)
+
+**Single tag promoted across all environments:**
+
+| Environment | Tag Used | Example | Notes |
+|-------------|----------|---------|-------|
+| **Development** | `YY.MM.DD.PATCH` | `25.01.05.0` | Same tag as QA/Prod |
+| **QA** | `YY.MM.DD.PATCH` | `25.01.05.0` | Same tag promoted from Dev |
+| **Production** | `YY.MM.DD.PATCH` | `25.01.05.0` | Same tag promoted from QA |
+
+**Key Benefits:**
+- ✅ **Atomic promotion** - one tag, multiple environments
+- ✅ **Simplified management** - no environment-specific tags
+- ✅ **Clear audit trail** - release manifest tracks which tag is where
+- ✅ **Reduces tag sprawl** - one tag instead of three per release
+
+**See**: [VERSIONING-STRATEGY.md](./VERSIONING-STRATEGY.md) for complete details.
 
 ### Tag Characteristics
 
-**Development Tags**:
-- Created automatically on merge to main
-- Based on short commit SHA
-- Ephemeral (may be deleted after promotion)
-- Not semantic versioned
-
-**QA Tags**:
-- Created manually when ready for QA
-- Follow semantic versioning
+**All Tags:**
+- Created manually when ready for release
+- Format: `YY.MM.DD.PATCH`
+- Use PATCH=0 for new day, increment for hotfixes
 - Immutable (never deleted)
-- Require successful dev testing
-
-**Production Tags**:
-- Created manually after QA approval
-- Follow semantic versioning
-- Immutable (never deleted)
-- Require CAB approval
+- Same tag promoted through all environments
+- Release manifest tracks deployment status per environment
 
 ---
 
@@ -211,22 +208,22 @@ git push origin dev-$(git rev-parse --short HEAD)
 git checkout main
 git pull
 
-# 2. Create QA release tag (semantic version)
-git tag -a qa-v1.1.0 -m "Release 1.1.0 for QA testing"
+# 2. Create QA release tag (calendar version)
+git tag -a qa-25.01.05.0 -m "Release January 5, 2025 for QA testing"
 
 # 3. Push tag
-git push origin qa-v1.1.0
+git push origin qa-25.01.05.0
 
 # 4. Tekton promotion pipeline triggered by tag
-#    - Syncs AAP QA Project to qa-v1.1.0
-#    - Builds EE with tag: ee:qa-v1.1.0
+#    - Syncs AAP Project to 25.01.05.0
+#    - Builds EE with tag: ee:25.01.05.0
 #    - Deploys to QA environment
 #    - Runs smoke tests
 ```
 
 **AAP Project Configuration**:
 - **Project Name**: "QA - Automation Collection"
-- **SCM Branch/Tag/Commit**: `qa-v1.1.0` (specific tag)
+- **SCM Branch/Tag/Commit**: `25.01.05.0` (specific tag)
 - **Update on Launch**: ❌ Disabled (use exact tag)
 
 **Promotion Gates**:
@@ -248,29 +245,29 @@ git push origin qa-v1.1.0
 **Process**:
 ```bash
 # 1. Verify QA tag is validated
-git checkout qa-v1.1.0
+git checkout qa-25.01.05.0
 
-# 2. Create production tag (may match QA version or use separate version)
-git tag -a prod-v1.0.0 -m "Production Release 1.0.0
+# 2. Create production tag
+git tag -a prod-25.01.05.0 -m "Production Release January 5, 2025
 Approved by: CAB
-Approval Date: 2025-01-04
+Approval Date: 2025-01-05
 Approval Ticket: CHG0001234"
 
 # 3. Push tag
-git push origin prod-v1.0.0
+git push origin prod-25.01.05.0
 
 # 4. Tekton promotion pipeline with approval gate
 #    - Waits for manual approval
 #    - Creates backup/rollback point
-#    - Syncs AAP Prod Project to prod-v1.0.0
-#    - Builds EE with tag: ee:prod-v1.0.0
+#    - Syncs AAP Prod Project to same tag (25.01.05.0)
+#    - Uses same EE image: ee:25.01.05.0
 #    - Deploys to Prod (blue-green)
 #    - Runs verification
 ```
 
 **AAP Project Configuration**:
 - **Project Name**: "Prod - Automation Collection"
-- **SCM Branch/Tag/Commit**: `prod-v1.0.0` (specific tag)
+- **SCM Branch/Tag/Commit**: `25.01.05.0` (specific tag)
 - **Update on Launch**: ❌ Disabled (use exact tag)
 
 **Promotion Gates**:
@@ -328,14 +325,14 @@ gh pr merge --squash
 
 # === Promote to QA ===
 
-# 8. After dev validation, create QA tag
+# 8. After dev validation, create release tag
 git checkout main
 git pull
-git tag -a qa-v1.2.0 -m "Release 1.2.0: Add webserver role"
-git push origin qa-v1.2.0
+git tag -a 25.01.05.0 -m "Release January 5, 2025: Add webserver role"
+git push origin 25.01.05.0
 
 # 9. Tekton promotion pipeline runs
-# AAP QA syncs to qa-v1.2.0
+# Deploys to dev, then promotes to QA after validation
 
 # 10. QA team validates
 # Runs test playbooks, verifies functionality
@@ -345,21 +342,17 @@ git push origin qa-v1.2.0
 # 11. After QA approval, submit to CAB
 # Create change request, document rollback plan
 
-# 12. After CAB approval, create prod tag
-git tag -a prod-v1.1.0 -m "Production Release 1.1.0: Add webserver role
-Approved by: CAB
-Change: CHG0001234"
-git push origin prod-v1.1.0
+# 12. After CAB approval, update release manifest
+# Mark tag 25.01.05.0 as approved for production
 
 # 13. Tekton production pipeline runs
-# Creates backup, deploys to prod with approval gate
+# Deploys same tag (25.01.05.0) to production with approval gate
 
 # === Rollback if Needed ===
 
 # 14. If issues found, rollback to previous tag
-git checkout prod-v1.0.0
-# Update AAP Project to point to prod-v1.0.0
-# Or trigger automated rollback pipeline
+# Update release manifest to deploy 25.01.04.0 to prod
+# Or create new tag pointing to previous commit
 ```
 
 ---
@@ -373,18 +366,18 @@ EE images are tagged to match the code release tags:
 ```bash
 # Build EE for QA release
 cd automation-ee-example
-ansible-builder build -t my-registry/my-ee:qa-v1.2.0
+ansible-builder build -t my-registry/my-ee:25.01.05.0
 
 # Push to registry
-podman push my-registry/my-ee:qa-v1.2.0
+podman push my-registry/my-ee:25.01.05.0
 ```
 
 **AAP Job Template Configuration**:
 ```yaml
 name: "Deploy Webserver - QA"
-execution_environment: "my-registry/my-ee:qa-v1.2.0"  # Matches code tag
+execution_environment: "my-registry/my-ee:25.01.05.0"  # Matches code tag
 project: "QA - Automation Collection"
-project_version: "qa-v1.2.0"  # Matches code tag
+project_version: "qa-25.01.05.0"  # Matches code tag
 ```
 
 **Benefits**:
@@ -397,21 +390,36 @@ project_version: "qa-v1.2.0"  # Matches code tag
 Release manifests tie everything together:
 
 ```yaml
-# automation-release-manifest/releases/qa/release-qa-v1.2.0.yaml
-version: "qa-v1.2.0"
-created: "2025-01-04T10:30:00Z"
+# automation-release-manifest/releases/release-25.01.05.0.yaml
+version: "25.01.05.0"
+created: "2025-01-05T10:30:00Z"
 components:
   automation_collection:
     repository: "github.com/org/automation-collection"
     commit: "abc1234567890abcdef1234567890abcdef12345"  # Full SHA
-    tag: "qa-v1.2.0"
+    tag: "25.01.05.0"
   execution_environment:
-    image: "my-registry/my-ee:qa-v1.2.0"
+    image: "my-registry/my-ee:25.01.05.0"
     digest: "sha256:1234567890abcdef..."  # Image digest
   aap_configuration:
     repository: "github.com/org/aap-config-as-code"
     commit: "def4567890abcdef1234567890abcdef45678901"
-    tag: "qa-v1.2.0"
+    tag: "25.01.05.0"
+
+# Track which environments have this tag deployed
+environments:
+  dev:
+    deployed_at: "2025-01-05T09:00:00Z"
+    deployed_by: "tekton-pipeline"
+  qa:
+    deployed_at: "2025-01-05T11:00:00Z"
+    deployed_by: "release-team"
+    validated: true
+  prod:
+    deployed_at: "2025-01-05T15:00:00Z"
+    deployed_by: "release-manager"
+    approved_by: "CAB"
+    approved_at: "2025-01-05T14:00:00Z"
 ```
 
 ---
@@ -451,11 +459,11 @@ execution_environment: "my-ee:latest"  # ❌ Unpredictable
 
 **Instead**: Use specific tags
 ```yaml
-# AAP Prod Project
-scm_branch: "prod-v1.0.0"  # ✅ Immutable
+# AAP Project (same tag for all environments)
+scm_branch: "25.01.05.0"  # ✅ Immutable CalVer tag
 
-# AAP Prod Job Template
-execution_environment: "my-ee:prod-v1.0.0"  # ✅ Specific version
+# AAP Job Template
+execution_environment: "my-ee:25.01.05.0"  # ✅ Matching version
 ```
 
 ---
@@ -464,15 +472,16 @@ execution_environment: "my-ee:prod-v1.0.0"  # ✅ Specific version
 
 **Bad**:
 ```bash
-# Merge to main, tag directly for prod
-git tag prod-v1.0.0  # ❌ Never tested in QA
+# Merge to main, deploy directly to prod without testing
+git tag 25.01.05.0  # ❌ Skip dev/QA testing
 ```
 
 **Instead**: Follow the promotion path
 ```bash
-git tag dev-abc123   # Test in dev
-git tag qa-v1.0.0    # Test in QA
-git tag prod-v1.0.0  # Deploy to prod
+# Create single CalVer tag
+git tag 25.01.05.0   # Create release tag
+# Promote through: dev → qa → prod
+# Same tag used for all environments
 ```
 
 ---
@@ -481,9 +490,9 @@ git tag prod-v1.0.0  # Deploy to prod
 
 **Bad**:
 ```bash
-git tag -d qa-v1.0.0        # ❌ Delete tag
-git tag qa-v1.0.0 <new-commit>  # ❌ Recreate on different commit
-git push origin qa-v1.0.0 --force  # ❌ Force push tag
+git tag -d 25.01.05.0        # ❌ Delete tag
+git tag 25.01.05.0 <new-commit>  # ❌ Recreate on different commit
+git push origin 25.01.05.0 --force  # ❌ Force push tag
 ```
 
 **Why it's bad**:
@@ -491,9 +500,9 @@ git push origin qa-v1.0.0 --force  # ❌ Force push tag
 - Loses audit trail
 - AAP may cache old version
 
-**Instead**: Create new version
+**Instead**: Create new version (increment PATCH)
 ```bash
-git tag qa-v1.0.1  # ✅ New version
+git tag 25.01.05.1  # ✅ New version (hotfix)
 ```
 
 ---
@@ -531,7 +540,7 @@ Protect release tags from deletion:
 ```bash
 # GitHub Repository Settings
 # Settings > Tags > Protected tags
-# Pattern: prod-v*
+# Pattern: [0-9][0-9].*  # Protects all CalVer tags
 # - Prevent tag deletion
 # - Require approval to create
 ```
@@ -574,7 +583,7 @@ stateDiagram-v2
 
 ```bash
 # Good
-git tag -a qa-v1.2.0 -m "Release 1.2.0: Add monitoring and logging
+git tag -a qa-25.01.05.0 -m "Release January 5, 2025: Add monitoring and logging
 - Add monitoring role with Prometheus integration
 - Add logging role with ELK stack
 - Update EE with required collections
@@ -582,31 +591,42 @@ Tested: All molecule tests pass
 QA Ticket: QA-1234"
 
 # Bad
-git tag qa-v1.2.0  # No message
+git tag qa-25.01.05.0  # No message
 ```
 
 ### 3. Document Promotion Decisions
 
 ```bash
-# Production tag should reference approval
-git tag -a prod-v1.1.0 -m "Production Release 1.1.0
+# Production tag should document approvals in release manifest
+# Tag message focused on changes
+git tag -a 25.01.05.0 -m "Release January 5, 2025
+
 Features:
 - Webserver role with HA support
 - Database backup automation
-Approvals:
-- QA Sign-off: Jane Doe (2025-01-04)
-- Security Review: PASS
-- CAB Approval: CHG0001234 (2025-01-05)
-Rollback Plan: Revert to prod-v1.0.0"
+
+Testing:
+- All molecule tests passed
+- Security scan: PASS
+- Performance validated
+
+Rollback Plan: Revert to 25.01.04.0"
+
+# Approvals tracked in release manifest:
+# - QA Sign-off: Jane Doe (2025-01-05)
+# - Security Review: PASS
+# - CAB Approval: CHG0001234 (2025-01-05)
 ```
 
 ### 4. Use Semantic Versioning
 
-Follow [SemVer](https://semver.org/) for QA and Production tags:
+**Note**: As of 2025-01-05, we use **Calendar Versioning** (YY.MM.DD.PATCH) instead of Semantic Versioning.
 
-- **MAJOR**: Breaking changes (v2.0.0)
-- **MINOR**: New features, backward compatible (v1.1.0)
-- **PATCH**: Bug fixes (v1.0.1)
+See [VERSIONING-STRATEGY.md](./VERSIONING-STRATEGY.md) for details on the current versioning approach.
+
+**Version Format**: `YY.MM.DD.PATCH`
+- **YY.MM.DD**: Release date
+- **PATCH**: Hotfix/patch number (starts at 0)
 
 ### 5. Automate Where Possible
 
@@ -646,8 +666,8 @@ metadata:
   name: promote-to-qa
 spec:
   params:
-    - name: qa-tag
-      description: QA release tag (e.g., qa-v1.2.0)
+    - name: release-tag
+      description: Release tag in CalVer format (e.g., 25.01.05.0)
   tasks:
     - name: sync-project
       params:
@@ -657,13 +677,15 @@ spec:
 
 ### AAP Projects
 
-AAP Projects configured per environment:
+AAP Projects configured per environment to use same tags:
 
 | Environment | Project Config |
 |-------------|---------------|
-| **Dev** | Branch: `main`, Update on Launch: ✅ |
-| **QA** | Tag: `qa-v1.2.0`, Update on Launch: ❌ |
-| **Prod** | Tag: `prod-v1.1.0`, Update on Launch: ❌ |
+| **Dev** | Tag: `25.01.05.0`, Update on Launch: ❌ |
+| **QA** | Tag: `25.01.05.0`, Update on Launch: ❌ |
+| **Prod** | Tag: `25.01.05.0`, Update on Launch: ❌ |
+
+**Note**: All environments use the same git tag. Promotion is managed via release manifest and pipeline approvals.
 
 ---
 

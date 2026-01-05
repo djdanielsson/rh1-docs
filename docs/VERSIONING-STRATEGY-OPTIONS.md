@@ -596,7 +596,78 @@ Approved: CHG0001234"
 
 ---
 
-**Status**: 🟡 Awaiting Decision  
-**Last Updated**: 2025-12-03  
-**Next Review**: [TBD]
+## DECISION RECORD
+
+**Date**: 2025-01-05
+**Decision Made By**: Platform Team
+**Decision**: YY.MM.DD.PATCH (CalVer with Patch)
+
+### Chosen Format
+
+```
+YY.MM.DD.PATCH
+```
+
+**Examples:**
+- `25.01.05.0` - January 5, 2025, initial release
+- `25.01.05.1` - Same day, hotfix 1
+- `25.01.06.0` - January 6, 2025, new release
+- `25.02.15.0` - February 15, 2025, new release
+
+### Rationale
+
+1. **Date Visibility**: Instantly see when something was released (YY.MM.DD)
+2. **Hotfix Support**: PATCH number allows multiple releases per day
+3. **Simplicity**: Single consistent format across all repos
+4. **Ops-Friendly**: Clear for operations teams tracking deployments
+5. **No Subjectivity**: Version bumps are automatic based on date
+6. **Fine-Grained**: Daily granularity good for active development
+
+### Application
+
+**All repositories and components will use this format:**
+- AAP Configuration repos
+- Ansible Collections
+- Execution Environments
+- Release Manifests
+- Git tags
+
+**Git Tag Format:**
+```bash
+# All environments use the same tag
+25.01.05.0     # Initial release
+25.01.05.1     # Hotfix
+25.01.06.0     # Next day
+
+# Tag is promoted through environments via release manifest
+# Not separate per-environment tags
+```
+
+### Action Items
+
+- [x] Document decision in VERSIONING-STRATEGY-OPTIONS.md
+- [ ] Create new VERSIONING-STRATEGY.md with YY.MM.DD.PATCH as standard
+- [ ] Update BRANCHING-STRATEGY.md with new tag formats
+- [ ] Update EE-VERSIONING-STRATEGY.md with new examples
+- [ ] Update release manifest schema to accept new format
+- [ ] Update CI/CD pipeline tag validation regex
+- [ ] Update collection galaxy.yml versioning approach
+- [ ] Create migration guide for existing tags
+- [ ] Communicate change to team
+
+**Timeline**: 2025-01-05 to 2025-01-19 (2 weeks)
+
+**Migration Strategy**: New releases use new format, old tags remain unchanged
+
+---
+
+**Status**: 🟢 Decision Made - Implementation In Progress  
+**Last Updated**: 2025-01-05  
+**Next Review**: After implementation (2025-01-19)
+
+
+
+
+
+
 

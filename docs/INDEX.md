@@ -56,8 +56,13 @@
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [CI/CD Guide](./CICD-GUIDE.md) | Complete workflow documentation | DevOps, developers |
+| [Versioning Strategy](./VERSIONING-STRATEGY.md) | **YY.MM.DD.PATCH** standard ⭐ | Everyone |
 | [Branching Strategy](./BRANCHING-STRATEGY.md) | Trunk-based dev with Git tags | All developers, release managers |
 | [EE Versioning Strategy](./EE-VERSIONING-STRATEGY.md) | Execution Environment version locking | DevOps, release managers |
+| [Versioning Options](./VERSIONING-STRATEGY-OPTIONS.md) | Decision document (reference) | Architects, release managers |
+| [AAP Upgrade Guide](./AAP-UPGRADE-GUIDE.md) | AAP version upgrade procedures | Platform team, DevOps |
+| [Disaster Recovery](./DISASTER-RECOVERY.md) | DR procedures and runbooks | Platform team, operations |
+| [Multi-Cluster Guide](./MULTI-CLUSTER-GUIDE.md) | Multi-cluster deployment | Architects, platform team |
 
 ### 📖 Governance
 
@@ -305,23 +310,30 @@ See: [Testing Guide](./TESTING-GUIDE.md)
 
 ## 🔄 Document Updates
 
-### Recent Changes (v2.0 - 2025-01-04)
+### Recent Changes
 
-**Consolidation & Cleanup**:
+**v2.1 (2025-01-05): Versioning Strategy**
+- ✅ **Adopted YY.MM.DD.PATCH** (Calendar Versioning) as platform standard
+- ✅ Created [VERSIONING-STRATEGY.md](./VERSIONING-STRATEGY.md) - Complete guide
+- ✅ Created [VERSIONING-STRATEGY-OPTIONS.md](./VERSIONING-STRATEGY-OPTIONS.md) - Decision document
+- ✅ Created helper scripts: `generate-version.sh`, `validate-version.sh`, `create-release-tag.sh`
+- ✅ Updated [BRANCHING-STRATEGY.md](./BRANCHING-STRATEGY.md) with new tag formats
+- ✅ Updated [EE-VERSIONING-STRATEGY.md](./EE-VERSIONING-STRATEGY.md) (partial)
+- ✅ Created [VERSIONING-IMPLEMENTATION-SUMMARY.md](./VERSIONING-IMPLEMENTATION-SUMMARY.md)
+
+**v2.0 (2025-01-04): Documentation Consolidation**
 - ✅ Merged PRE-COMMIT-SETUP + PRE-COMMIT-REFERENCE → **PRE-COMMIT-GUIDE.md**
 - ✅ Added quick start to **CICD-GUIDE.md**
 - ✅ Removed 6 redundant summary/completion docs
 - ✅ Streamlined from ~20 docs to **10 core docs** (+ 5 diagram docs)
 - ✅ Improved documentation navigation and discoverability
 
-**Key Improvements**:
-- Eliminated redundancy between docs
-- Consolidated related information
-- Added quick start sections
-- Improved cross-referencing
-- Cleaner, more maintainable structure
-
 ### Version History
+
+- **v2.1** (2025-01-05): Versioning Strategy
+  - Adopted YY.MM.DD.PATCH (Calendar Versioning)
+  - Created versioning documentation and scripts
+  - Updated branching and EE strategies
 
 - **v2.0** (2025-01-04): Documentation consolidation
   - Reduced from 20+ to 10 core documents
@@ -354,8 +366,8 @@ See: [Testing Guide](./TESTING-GUIDE.md)
 
 ---
 
-**Last Updated**: 2025-01-04
-**Version**: 2.0 (Consolidated)
+**Last Updated**: 2025-01-05
+**Version**: 2.1 (Versioning Added)
 **Maintained By**: Platform Team
-**Total Content**: 15 documents (10 core + 5 diagrams), 39 diagrams, ~23,000 lines
+**Total Content**: 18 documents (13 core + 5 diagrams), 39 diagrams, ~30,000 lines
 **Feedback**: File issues or submit PRs to improve documentation

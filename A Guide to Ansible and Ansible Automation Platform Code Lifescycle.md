@@ -79,7 +79,7 @@ This guide outlines a robust workflow specifically for **Ansible Automation Plat
 * **Recommended Branching Strategy: Trunk-Based Development with Tags:**
   * Use a single main branch (e.g., main) in Git.[^78]
   * Develop features/fixes in short-lived branches, merging them back to main frequently via Pull/Merge Requests.[^78]
-  * Promote code to environments (QA, Prod) using **Git tags**. Create immutable tags (e.g., qa-v1.[^1].[^0], prod-v1.[^0].0) on specific commits in main.[^68] Configure AAP Projects for QA and Prod environments to check out these specific tags.[^1] The Dev environment's AAP Project typically tracks the main branch head.
+  * Promote code to environments (QA, Prod) using **Git tags** with CalVer format **YY.MM.DD.PATCH** (e.g., `25.01.05.0`). Create immutable tags on specific commits in main.[^68] The same tag promotes through all environments (dev → qa → prod). Configure AAP Projects for QA and Prod environments to check out these specific tags.[^1] The Dev environment's AAP Project typically tracks the main branch head.
   * *Why this strategy for AAP?* It simplifies Git management, avoids environment branch synchronization issues 32, and integrates cleanly with AAP Projects' ability to deploy specific tags.
 * **Mandate Code Reviews:** Use Pull Requests (PRs) or Merge Requests (MRs) in your Git platform for all changes merged into main. This ensures code quality before it's pulled into AAP.[^84]
 
@@ -142,18 +142,17 @@ gitGraph
     checkout main
     merge feature/database-role tag: "Merge PR #124"
     commit id: "Update EE definition"
-    commit id: "Dev testing passed" tag: "qa-v1.1.0"
+    commit id: "Dev testing passed" tag: "25.01.05.0"
 
     checkout feature/monitoring
     commit id: "Fix molecule tests"
 
     checkout main
     merge feature/monitoring tag: "Merge PR #125"
-    commit id: "QA testing passed" tag: "prod-v1.0.0"
+    commit id: "QA/Prod validated" tag: "25.01.06.0"
 
     commit id: "Hotfix: update vars"
-    commit id: "Tested in dev" tag: "qa-v1.1.1"
-    commit id: "QA verified" tag: "prod-v1.0.1"
+    commit id: "Tested and validated" tag: "25.01.06.1"
 ```
 
 #### Git Workflow Explanation
@@ -161,9 +160,10 @@ gitGraph
 **Trunk-Based Development Strategy:**
 - **main branch**: Single source of truth, always deployable
 - **Feature branches**: Short-lived, merge back to main frequently
-- **Git tags**: Immutable markers for environment promotion
-  - `qa-vX.Y.Z`: Tags for QA environment deployment
-  - `prod-vX.Y.Z`: Tags for Production environment deployment
+- **Git tags**: Immutable markers using CalVer format **YY.MM.DD.PATCH**
+  - Example: `25.01.05.0` for January 5, 2025 initial release
+  - Example: `25.01.05.1` for hotfix on same day
+  - Same tag promotes through all environments (dev → qa → prod)
 
 **Workflow Steps:**
 1. Create feature branch from main
@@ -229,7 +229,7 @@ flowchart TD
     DevTest -->|No| Hotfix[Create Hotfix Branch]
     Hotfix --> DevLoop
 
-    DevTest -->|Yes| QATag[Create QA Tag<br/>qa-vX.Y.Z]
+    DevTest -->|Yes| QATag[Create Release Tag<br/>YY.MM.DD.PATCH]
     QATag --> QAReady([Ready for QA Deployment])
 
     style Code fill:#fff4e1
@@ -278,8 +278,8 @@ flowchart TD
 * Create **AAP Projects** that point to your Git repository.[^1]
 * Configure the **SCM Branch/Tag/Commit** field for each environment's project:
   * Dev Project: Points to main branch.
-  * QA Project: Points to the relevant qa-vX.Y.Z tag.
-  * Prod Project: Points to the relevant prod-vX.Y.Z tag.
+  * QA Project: Points to the release tag (e.g., `25.01.05.0`).
+  * Prod Project: Points to the same release tag (e.g., `25.01.05.0`).
 * Use SCM Update Options like Update Revision on Launch to ensure AAP jobs run with the specified code version.[^2]
 * Configure necessary **SCM Credentials** in AAP if the repository is private.[^32]
 
@@ -325,14 +325,14 @@ flowchart TD
   * **Release Tag Variables:** When a release is created, update the environment-specific variables with the new release tags:
     ```yaml
     # group_vars/aap_qa.yml
-    code_tag: "qa-v1.1.0"  # Updated when QA release is created
-    ee_tag: "qa-v1.1.0"    # Updated when QA release is created
-    ee_image: "my-registry/my-ee:qa-v1.1.0"
+    code_tag: "25.01.05.0"  # Updated when release is created
+    ee_tag: "25.01.05.0"    # Same version across all components
+    ee_image: "my-registry/my-ee:25.01.05.0"
     ```
   * **AAP Object Name Referencing (Especially for Credentials):** Define AAP Credentials securely within each AAP instance. In your CaC definitions (e.g., for a Job Template), reference the *name* of the credential. AAP resolves this name to the actual credential specific to that AAP instance at runtime.[^68] This avoids storing sensitive details in the CaC code.
   * **Lookup Plugins (Optional):** Use Ansible lookup plugins like env or cloud parameter stores within CaC definitions for dynamic values.[^68]
 * Use **Ansible Vault** within the CaC repository *only* for secrets needed by the CaC playbook itself (e.g., an AAP service account password), not for the runtime credentials AAP uses.[^68]
-* **Tagging Strategy:** After updating the CaC repository with new release tags, tag the CaC repository with the same version (e.g., `qa-v1.1.0`). This creates an immutable snapshot of the configuration that matches the code and EE versions, enabling atomic rollbacks.
+* **Tagging Strategy:** After updating the CaC repository with new release tags, tag the CaC repository with the same CalVer version (e.g., `25.01.05.0`). This creates an immutable snapshot of the configuration that matches the code and EE versions, enabling atomic rollbacks.
 
 ---
 
@@ -342,30 +342,31 @@ The phases described above work together to create a synchronized and controlled
 
 1. **The Central Role of Git and Tagging:**
    * The **Trunk-Based Development with Tags** Git strategy is the cornerstone of synchronization.[^68] All code changes (playbooks, roles, collection definitions, EE definitions, CaC definitions) are merged into the main branch after development and testing (including Molecule tests on feature branches).
-   * **Git tags** (e.g., qa-v1.[^1].[^0], prod-v1.[^0].0) are created on specific, validated commits on the main branch. These tags represent a complete, tested, and approved state of the automation intended for a specific environment.[^68] A tag bundles together the application code, the required EE definition, and potentially the corresponding AAP configuration state.
+   * **Git tags** using CalVer format (e.g., `25.01.05.0`) are created on specific, validated commits on the main branch. These tags represent a complete, tested, and approved state of the automation.[^68] The same tag promotes through all environments (dev → qa → prod). A tag bundles together the application code, the required EE definition, and the corresponding AAP configuration state.
 2. **Synchronizing Application Code (Playbooks, Roles, Collections):**
    * AAP Projects configured for QA and Production environments are set to sync **only the specific Git tag** corresponding to that environment's release.[^68]
    * When a promotion is triggered (often via an AAP Workflow), the first step is typically a Project Sync node that checks out the designated tag.[^74] This ensures that only the code belonging to that specific, tagged release is present for execution in that environment. Untagged changes on main or code from other feature branches are not pulled.
 3. **Synchronizing Execution Environments (EEs):**
    * The definition file for your EE (execution-environment.yml) lives in the same Git repository and is versioned along with the code it supports.[^115]
    * When a code release (represented by a Git tag) requires changes to the EE (e.g., a new collection version specified in requirements.yml), a new EE image must be built using ansible-builder.[^101]
-   * **Crucially, this new EE image should be tagged with a version that corresponds to the Git tag** (e.g., my-registry/my-ee:qa-v1.[^1].0). This creates an immutable link between the code version and its runtime environment.[^120]
+   * **Crucially, this new EE image should be tagged with a version that corresponds to the Git tag** (e.g., `my-registry/my-ee:25.01.05.0`). This creates an immutable link between the code version and its runtime environment.[^120]
    * The tagged EE image is pushed to your container registry (Automation Hub, Quay, etc.).[^115]
    * The AAP Job Template or Workflow for the target environment (QA/Prod) must be configured (often via CaC) to use this **specific, version-tagged EE image**.[^111] AAP will pull this exact image version when the job runs.[^120] Setting the pull policy appropriately (e.g., 'Always pull container' or 'Only pull if not present') ensures the correct image is used.[^121]
 4. **Synchronizing AAP Configuration (CaC):**
    * The Configuration as Code (CaC) definitions for AAP are managed in a **separate Git repository** and can be updated independently via PR/MR workflow for infrastructure changes (new Job Templates, updated Workflows, etc.).[^68]
    * When promoting a release to QA or Prod, the following sequence occurs:
-     * **Step 1**: Code repository is tagged (e.g., `qa-v1.1.0`)
-     * **Step 2**: EE image is built and tagged (e.g., `qa-v1.1.0`)
-     * **Step 3**: CaC repository is **updated** with the new code tag and EE tag in its environment-specific variables (e.g., `group_vars/aap_qa.yml` sets `code_tag: qa-v1.1.0` and `ee_tag: qa-v1.1.0`)
-     * **Step 4**: CaC repository is **tagged** with the same release version (e.g., `qa-v1.1.0`)
-     * **Step 5**: CaC playbook runs, checking out the CaC tag `qa-v1.1.0`, and applies the configuration to the AAP instance
-   * These CaC definitions ensure that the AAP objects (Projects, Job Templates, Workflows, EE references) are configured correctly for that specific release tag. For example, the QA Job Template definition in CaC will point to the qa-vX.Y.Z Git tag in its Project configuration and the my-registry/my-ee:qa-vX.Y.Z image in its EE configuration.[^68]
+     * **Step 1**: Code repository is tagged (e.g., `25.01.05.0`)
+     * **Step 2**: EE image is built and tagged (e.g., `25.01.05.0`)
+     * **Step 3**: CaC repository is **updated** with the new code tag and EE tag in its environment-specific variables (e.g., `group_vars/aap_qa.yml` sets `code_tag: 25.01.05.0` and `ee_tag: 25.01.05.0`)
+     * **Step 4**: CaC repository is **tagged** with the same release version (e.g., `25.01.05.0`)
+     * **Step 5**: CaC playbook runs, checking out the CaC tag `25.01.05.0`, and applies the configuration to the AAP instance
+     * **Step 6**: Same tag promotes through QA and Prod environments (tracked in release manifest)
+   * These CaC definitions ensure that the AAP objects (Projects, Job Templates, Workflows, EE references) are configured correctly for that specific release tag. For example, the Job Template definition in CaC will point to the `25.01.05.0` Git tag in its Project configuration and the `my-registry/my-ee:25.01.05.0` image in its EE configuration.[^68]
    * **Key Point**: The CaC repository maintains its own version history but is tagged with the same version as the code/EE release, ensuring all components are synchronized and can be rolled back together.
 5. **Orchestration with AAP Workflows:**
    * AAP Workflows are the engine that drives the synchronized promotion.[^114] A typical promotion workflow for QA might look like this:
-     * **Trigger:** Manual launch or triggered by the creation of a qa-vX.Y.Z Git tag.
-     * **Node 1: Sync QA Project:** Syncs the AAP Project using the specific qa-vX.Y.Z tag.[^74]
+     * **Trigger:** Manual launch or triggered by the creation of a CalVer Git tag (e.g., `25.01.05.0`).
+     * **Node 1: Sync Project:** Syncs the AAP Project using the specific tag (e.g., `25.01.05.0`).[^74]
      * **Node 2: (Optional) Run QA Tests:** Executes a Job Template containing integration or acceptance tests against the QA environment, using the tagged code and the corresponding version-tagged EE.
      * **Node 3: (Optional) Approval Gate:** Pauses the workflow for manual QA sign-off.
      * **Node 4: Run QA Deployment:** Executes the main deployment Job Template for QA, which uses the tagged code, the version-tagged EE, and targets the QA inventory.
@@ -426,11 +427,11 @@ flowchart TD
 
     MainBranch --> DevSync[Dev AAP Project<br/>Syncs main branch]
     DevSync --> DevTest{Test in Dev?}
-    DevTest -->|Pass| CreateQATag[Create Git Tag<br/>qa-v1.1.0]
+    DevTest -->|Pass| CreateQATag[Create Git Tag<br/>25.01.05.0]
     DevTest -->|Fail| FeatureBranch
 
     CreateQATag --> BuildEE[Build Execution Environment<br/>ansible-builder]
-    BuildEE --> TagEE[Tag EE Image<br/>my-registry/my-ee:qa-v1.1.0]
+    BuildEE --> TagEE[Tag EE Image<br/>my-registry/my-ee:25.01.05.0]
     TagEE --> PushEE[Push to Container Registry<br/>Automation Hub/Quay]
 
     PushEE --> UpdateCaC[Update CaC Definitions<br/>infra.aap_configuration]
@@ -439,8 +440,8 @@ flowchart TD
     CaCGit --> Phase4QA[Phase 4: Deploy to QA]
 
     Phase4QA --> WF_QA[QA Workflow Job Template]
-    WF_QA --> QA1[Sync QA Project<br/>Tag: qa-v1.1.0]
-    QA1 --> QA2[Pull EE Image<br/>qa-v1.1.0]
+    WF_QA --> QA1[Sync QA Project<br/>Tag: 25.01.05.0]
+    QA1 --> QA2[Pull EE Image<br/>25.01.05.0]
     QA2 --> QA3[Run Job Template<br/>QA Inventory]
     QA3 --> QA4{QA Tests Pass?}
 
@@ -449,18 +450,18 @@ flowchart TD
 
     QA4 -->|Pass| QA_Approval[Approval Node<br/>QA Sign-off]
 
-    QA_Approval -->|Approved| CreateProdTag[Create Git Tag<br/>prod-v1.0.0]
+    QA_Approval -->|Approved| PromoteProd[Promote to Prod<br/>Same tag: 25.01.05.0]
     QA_Approval -->|Rejected| FeatureBranch
 
-    CreateProdTag --> BuildProdEE[Build/Tag Prod EE<br/>prod-v1.0.0]
+    PromoteProd --> ApplyProdCaC[Apply CaC to Prod<br/>Same tag: 25.01.05.0]
     BuildProdEE --> PushProdEE[Push to Registry]
 
     PushProdEE --> UpdateProdCaC[Update Prod CaC]
     UpdateProdCaC --> Phase4Prod[Phase 4: Deploy to Prod]
 
     Phase4Prod --> WF_Prod[Prod Workflow Job Template]
-    WF_Prod --> Prod1[Sync Prod Project<br/>Tag: prod-v1.0.0]
-    Prod1 --> Prod2[Pull EE Image<br/>prod-v1.0.0]
+    WF_Prod --> Prod1[Sync Prod Project<br/>Tag: 25.01.05.0]
+    Prod1 --> Prod2[Pull EE Image<br/>25.01.05.0]
     Prod2 --> Prod3[Run Job Template<br/>Prod Inventory]
     Prod3 --> Prod4{Prod Deploy Success?}
 
