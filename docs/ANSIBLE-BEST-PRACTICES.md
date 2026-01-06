@@ -1975,6 +1975,447 @@ Before committing code, verify:
 
 ---
 
+## Real-World Examples
+
+### Example 1: Web Server Deployment with Error Handling
+
+**Good Pattern - Comprehensive Error Handling**:
+```yaml
+---
+- name: Deploy web application
+  hosts: webservers
+  become: true
+  vars:
+    app_name: "mywebapp"
+    app_port: 8080
+
+  pre_tasks:
+    - name: Validate required variables
+      ansible.builtin.assert:
+        that:
+          - app_name is defined
+          - app_port > 1024 and app_port < 65535
+        fail_msg: "Invalid application configuration"
+
+  tasks:
+    - name: Install web server
+      ansible.builtin.package:
+        name: nginx
+        state: present
+      register: pkg_result
+      retries: 3
+      delay: 10
+      until: pkg_result is success
+
+    - name: Create application directory
+      ansible.builtin.file:
+        path: "/opt/{{ app_name }}"
+        state: directory
+        owner: "{{ app_user | default('www-data') }}"
+        group: "{{ app_group | default('www-data') }}"
+        mode: '0755'
+
+    - name: Deploy application files
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ app_user | default('www-data') }}"
+        group: "{{ app_group | default('www-data') }}"
+        mode: "{{ item.mode | default('0644') }}"
+      loop:
+        - src: "app.jar"
+          dest: "/opt/{{ app_name }}/app.jar"
+          mode: "0755"
+        - src: "config.yml"
+          dest: "/opt/{{ app_name }}/config.yml"
+      notify: restart_app
+
+    - name: Configure nginx
+      ansible.builtin.template:
+        src: nginx.conf.j2
+        dest: "/etc/nginx/sites-available/{{ app_name }}"
+        validate: nginx -t -c %s
+      notify: reload_nginx
+
+    - name: Enable site
+      ansible.builtin.file:
+        src: "/etc/nginx/sites-available/{{ app_name }}"
+        dest: "/etc/nginx/sites-enabled/{{ app_name }}"
+        state: link
+      notify: reload_nginx
+
+  post_tasks:
+    - name: Verify application is responding
+      ansible.builtin.uri:
+        url: "http://localhost:{{ app_port }}/health"
+        status_code: 200
+      register: health_check
+      until: health_check.status == 200
+      retries: 30
+      delay: 5
+
+  handlers:
+    - name: restart_app
+      ansible.builtin.service:
+        name: "{{ app_name }}"
+        state: restarted
+
+    - name: reload_nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+```
+
+### Example 2: Database Migration with Rollback
+
+**Good Pattern - Safe Database Operations**:
+```yaml
+---
+- name: Perform database migration
+  hosts: databases
+  vars:
+    migration_version: "2.1.0"
+    backup_retention_days: 7
+
+  tasks:
+    - name: Create pre-migration backup
+      ansible.builtin.command:
+        cmd: >
+          mysqldump -u {{ db_user }} -p{{ db_password }}
+          --single-transaction --routines --triggers {{ db_name }}
+          > /tmp/{{ db_name }}_pre_migration_{{ migration_version }}_{{ ansible_date_time.iso8601 }}.sql
+        environment:
+          MYSQL_PWD: "{{ db_password }}"
+      register: backup_result
+
+    - name: Validate backup integrity
+      ansible.builtin.command:
+        cmd: >
+          mysql -u {{ db_user }} -p{{ db_password }} -e
+          "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ db_name }}'"
+        environment:
+          MYSQL_PWD: "{{ db_password }}"
+      register: table_count
+      failed_when: table_count.rc != 0
+
+    - name: Run migration script
+      ansible.builtin.command:
+        cmd: mysql -u {{ db_user }} -p{{ db_password }} {{ db_name }} < {{ migration_script }}
+        environment:
+          MYSQL_PWD: "{{ db_password }}"
+      register: migration_result
+      failed_when: migration_result.rc != 0
+
+    - name: Verify migration success
+      ansible.builtin.command:
+        cmd: >
+          mysql -u {{ db_user }} -p{{ db_password }} -e
+          "SELECT version FROM schema_version ORDER BY applied_at DESC LIMIT 1" {{ db_name }}
+        environment:
+          MYSQL_PWD: "{{ db_password }}"
+      register: version_check
+      failed_when: not (migration_version in version_check.stdout)
+
+    - name: Clean old backups
+      ansible.builtin.find:
+        paths: /tmp
+        patterns: "{{ db_name }}_pre_migration_*.sql"
+        age: "{{ backup_retention_days }}d"
+      register: old_backups
+
+    - name: Remove old backup files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_backups.files }}"
+      when: old_backups.files | length > 0
+
+  rescue:
+    - name: Migration failed - attempt rollback
+      ansible.builtin.command:
+        cmd: >
+          mysql -u {{ db_user }} -p{{ db_password }} {{ db_name }}
+          < /tmp/{{ db_name }}_pre_migration_{{ migration_version }}_{{ ansible_date_time.iso8601 }}.sql
+        environment:
+          MYSQL_PWD: "{{ db_password }}"
+      when: backup_result.rc == 0
+
+    - name: Notify failure
+      ansible.builtin.debug:
+        msg: "Migration {{ migration_version }} failed and was rolled back"
+
+  always:
+    - name: Log migration attempt
+      ansible.builtin.lineinfile:
+        path: /var/log/migrations.log
+        line: "{{ ansible_date_time.iso8601 }} - Migration {{ migration_version }} - Result: {{ 'SUCCESS' if migration_result is defined and migration_result.rc == 0 else 'FAILED' }}"
+        create: true
+```
+
+### Example 3: Multi-Environment Configuration Management
+
+**Good Pattern - Environment-Specific Configurations**:
+```yaml
+---
+- name: Configure application per environment
+  hosts: all
+  vars_files:
+    - "vars/{{ environment }}.yml"
+  vars:
+    environments:
+      dev:
+        log_level: DEBUG
+        replicas: 1
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+      qa:
+        log_level: INFO
+        replicas: 2
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+      prod:
+        log_level: WARN
+        replicas: 3
+        resources:
+          limits:
+            cpu: "2000m"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+
+  tasks:
+    - name: Set environment-specific variables
+      ansible.builtin.set_fact:
+        app_config: "{{ environments[environment] }}"
+
+    - name: Validate environment configuration
+      ansible.builtin.assert:
+        that:
+          - environment in ['dev', 'qa', 'prod']
+          - app_config is defined
+        fail_msg: "Invalid environment: {{ environment }}"
+
+    - name: Create namespace
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ app_name }}-{{ environment }}"
+            labels:
+              environment: "{{ environment }}"
+              app: "{{ app_name }}"
+
+    - name: Deploy application
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ app_name }}-{{ environment }}"
+          spec:
+            replicas: "{{ app_config.replicas }}"
+            selector:
+              matchLabels:
+                app: "{{ app_name }}"
+            template:
+              metadata:
+                labels:
+                  app: "{{ app_name }}"
+                  environment: "{{ environment }}"
+              spec:
+                containers:
+                - name: app
+                  image: "{{ app_image }}:{{ app_version }}"
+                  ports:
+                  - containerPort: 8080
+                  env:
+                  - name: LOG_LEVEL
+                    value: "{{ app_config.log_level }}"
+                  resources: "{{ app_config.resources }}"
+                  livenessProbe:
+                    httpGet:
+                      path: /health
+                      port: 8080
+                    initialDelaySeconds: 30
+                    periodSeconds: 10
+                  readinessProbe:
+                    httpGet:
+                      path: /ready
+                      port: 8080
+                    initialDelaySeconds: 5
+                    periodSeconds: 5
+
+    - name: Create service
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ app_name }}-{{ environment }}"
+          spec:
+            selector:
+              app: "{{ app_name }}"
+            ports:
+            - port: 80
+              targetPort: 8080
+            type: ClusterIP
+
+    - name: Create ingress (prod only)
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ app_name }}-{{ environment }}"
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-prod"
+          spec:
+            tls:
+            - hosts:
+              - "{{ app_name }}-{{ environment }}.example.com"
+              secretName: "{{ app_name }}-tls"
+            rules:
+            - host: "{{ app_name }}-{{ environment }}.example.com"
+              http:
+                paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: "{{ app_name }}"
+                      port:
+                        number: 80
+      when: environment == 'prod'
+```
+
+### Example 4: Security Hardening with Compliance Checks
+
+**Good Pattern - Security and Compliance**:
+```yaml
+---
+- name: Security hardening and compliance
+  hosts: all
+  become: true
+  vars:
+    compliance_checks:
+      - name: "Disable root login"
+        check: "grep '^PermitRootLogin' /etc/ssh/sshd_config"
+        expected: "PermitRootLogin no"
+        fix: "sed -i 's/^PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config"
+      - name: "Set password expiration"
+        check: "grep '^PASS_MAX_DAYS' /etc/login.defs"
+        expected: "PASS_MAX_DAYS   90"
+        fix: "sed -i 's/^PASS_MAX_DAYS.*/PASS_MAX_DAYS   90/' /etc/login.defs"
+      - name: "Disable unused services"
+        check: "systemctl is-enabled telnet"
+        expected: "disabled"
+        fix: "systemctl disable telnet"
+      - name: "Configure firewall"
+        check: "firewall-cmd --list-all | grep 'services:'"
+        expected: "services: ssh"
+        fix: "firewall-cmd --permanent --remove-service=cockpit && firewall-cmd --reload"
+
+  pre_tasks:
+    - name: Gather system information
+      ansible.builtin.setup:
+        gather_subset:
+          - '!all'
+          - '!min'
+          - 'hardware'
+          - 'network'
+          - 'virtual'
+
+  tasks:
+    - name: Run compliance checks
+      ansible.builtin.command: "{{ item.check }}"
+      register: check_result
+      failed_when: false
+      loop: "{{ compliance_checks }}"
+      loop_control:
+        loop_var: compliance_item
+
+    - name: Report compliance status
+      ansible.builtin.debug:
+        msg: |
+          Compliance Check: {{ compliance_item.name }}
+          Status: {{ 'PASS' if compliance_item.expected in check_result.stdout else 'FAIL' }}
+          Expected: {{ compliance_item.expected }}
+          Actual: {{ check_result.stdout | trim }}
+      loop: "{{ compliance_checks }}"
+      loop_control:
+        loop_var: compliance_item
+
+    - name: Apply fixes for failed checks
+      ansible.builtin.command: "{{ compliance_item.fix }}"
+      when: compliance_item.expected not in check_result.stdout
+      loop: "{{ compliance_checks }}"
+      loop_control:
+        loop_var: compliance_item
+      notify: restart_services
+
+    - name: Install security updates
+      ansible.builtin.package:
+        name: "*"
+        state: latest
+      when: ansible_os_family == 'RedHat'
+
+    - name: Configure audit logging
+      ansible.builtin.template:
+        src: auditd.conf.j2
+        dest: /etc/audit/auditd.conf
+      notify: restart_auditd
+
+    - name: Set secure file permissions
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        mode: "{{ item.mode }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+      loop:
+        - path: /etc/ssh/sshd_config
+          mode: '0600'
+        - path: /etc/passwd
+          mode: '0644'
+        - path: /etc/shadow
+          mode: '0000'
+
+    - name: Generate compliance report
+      ansible.builtin.template:
+        src: compliance_report.j2
+        dest: "/var/log/compliance_{{ ansible_date_time.date }}.html"
+
+  handlers:
+    - name: restart_services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - sshd
+        - firewalld
+
+    - name: restart_auditd
+      ansible.builtin.service:
+        name: auditd
+        state: restarted
+```
+
+---
+
 **Version**: 2.0
 **Last Updated**: 2025-10-30
 **Status**: ✅ Aligned with Red Hat CoP and ansible-lint rules

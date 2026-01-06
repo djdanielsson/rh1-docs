@@ -230,10 +230,8 @@ If you need help during deployment:
 
 ## 📚 Additional Resources
 
-- **Full Quickstart**: `specs/001-cloud-native-ansible-lifecycle/quickstart.md`
-- **Data Model**: `specs/001-cloud-native-ansible-lifecycle/data-model.md`
-- **Contracts**: `specs/001-cloud-native-ansible-lifecycle/contracts/`
-- **Constitution**: `.specify/memory/constitution.md`
+- **Project Constitution**: `.specify/memory/constitution.md`
+- **Technical Specification**: `.specify/memory/specification.md`
 
 ## ✨ What Makes This Special
 

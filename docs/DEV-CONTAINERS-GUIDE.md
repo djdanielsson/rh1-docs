@@ -137,7 +137,18 @@ adt doc
 
 ```bash
 # Using ansible-creator directly (our current approach)
-ansible-creator add resource role webserver .
+
+## Collection and Role Creation
+
+**Creating a new collection:**
+```bash
+ansible-creator init collection myorg.my_collection
+```
+
+**Adding roles to an existing collection:**
+```bash
+ansible-creator add resource role webserver
+```
 
 # Using ADT (alternative, more integrated)
 adt role init webserver

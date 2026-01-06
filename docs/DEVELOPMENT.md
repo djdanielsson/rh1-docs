@@ -2,6 +2,40 @@
 
 This collection was created using `ansible-creator` and includes Molecule for testing.
 
+## Creating New Collections and Roles
+
+### Creating a New Collection
+
+Use `ansible-creator init collection` to create a new collection:
+
+```bash
+# Create a new collection
+ansible-creator init collection myorg.my_collection
+
+# This creates the complete collection structure with:
+# - galaxy.yml (collection metadata)
+# - roles/ directory
+# - plugins/ directory
+# - tests/ directory
+# - Molecule configuration
+```
+
+### Adding Roles to a Collection
+
+Use `ansible-creator add resource role` to add roles:
+
+```bash
+# Add a role to an existing collection
+ansible-creator add resource role my_role
+
+# This creates a complete role structure with:
+# - tasks/, defaults/, handlers/, etc.
+# - Molecule test scenarios
+# - Basic role skeleton
+```
+
+**Note**: These commands replace the older `ansible-galaxy collection/role init` commands and provide better integration with modern Ansible development workflows.
+
 ## Repository Structure
 
 This is the **Custom Ansible Collection** repository (`https://github.com/djdanielsson/rh1-custom-collection.git`) used in the Cloud-Native Ansible Lifecycle platform.
@@ -30,7 +64,7 @@ rh1_ansible_code_lifecycle/          # This is the collection root
 ├── tests/
 ├── aap-config-as-code/               # AAP Configuration repo
 ├── cluster-config/                   # Platform GitOps repo
-└── specs/                            # Specifications
+└── .specify/memory/                   # Specifications
 
 ```
 
@@ -190,7 +224,7 @@ git checkout -b feature/new-role
 
 ```bash
 # Create new role
-ansible-galaxy role init roles/my_new_role
+ansible-creator add resource role my_new_role
 
 # Add molecule tests
 cd roles/my_new_role
@@ -293,8 +327,8 @@ version: 1.2.3
 
 ## Links
 
-- **Project Specs**: `specs/001-cloud-native-ansible-lifecycle/`
-- **Quickstart**: `specs/001-cloud-native-ansible-lifecycle/quickstart.md`
+- **Project Constitution**: `.specify/memory/constitution.md`
+- **Technical Specification**: `.specify/memory/specification.md`
 - **AAP Config**: `aap-config-as-code/`
 - **Platform Config**: `cluster-config/`
 - **Molecule Docs**: https://molecule.readthedocs.io/

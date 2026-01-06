@@ -19,6 +19,152 @@
 
 ---
 
+## Practical Examples and Use Cases
+
+### Example 1: Web Application Deployment
+
+**Scenario**: Deploy Apache web server with custom configuration across dev/qa/prod environments.
+
+**Step 1: Add Role to Existing Collection**
+```bash
+# For this example, we'll add a role to the existing automation-collection-example
+# (See "Developer Workflow" section below for creating new collections from scratch)
+
+cd automation-collection-example
+ansible-creator add resource role webserver_deploy
+
+# Edit roles/webserver_deploy/tasks/main.yml
+cat > roles/webserver_deploy/tasks/main.yml << 'EOF'
+---
+- name: Install Apache
+  ansible.builtin.package:
+    name: httpd
+    state: present
+
+- name: Configure virtual host
+  ansible.builtin.template:
+    src: vhost.conf.j2
+    dest: /etc/httpd/conf.d/{{ app_name }}.conf
+  notify: restart_httpd
+
+- name: Deploy application files
+  ansible.builtin.copy:
+    src: "{{ app_source }}"
+    dest: "/var/www/{{ app_name }}"
+
+- name: Start and enable Apache
+  ansible.builtin.service:
+    name: httpd
+    state: started
+    enabled: true
+EOF
+```
+
+**Step 2: Configure AAP Job Template**
+```yaml
+# aap-config-as-code/group_vars/aap_dev/job_templates.yml
+controller_job_templates_dev_web:
+  - name: "Deploy Web App (Dev)"
+    description: "Deploy web application to dev servers"
+    job_type: run
+    organization: Applications
+    inventory: Dev Servers
+    project: Web Applications
+    playbook: playbooks/deploy_webapp.yml
+    execution_environment: Web EE (Dev)
+    credentials:
+      - Dev SSH Key
+    ask_variables_on_launch: true
+    extra_vars:
+      app_name: "mywebapp"
+      app_source: "/project/files/"
+```
+
+**Step 3: Promote to Production**
+```bash
+# Create release manifest
+cd automation-release-manifest
+cat > releases/release-26.01.06.0.yml << EOF
+version: "26.01.06.0"
+components:
+  aap_configuration: "$(git rev-parse HEAD:aap-config-as-code)"
+  execution_environment: "$(git rev-parse HEAD:automation-ee-example)"
+  collections: "$(git rev-parse HEAD:automation-collection-example)"
+EOF
+
+# Tag and promote
+git add releases/release-26.01.06.0.yml
+git commit -m "Release 26.01.06.0 - Web app deployment"
+git tag 26.01.06.0
+git push origin 26.01.06.0
+# Automatic promotion to QA, then manual to prod
+```
+
+### Example 2: Database Backup Automation
+
+**Scenario**: Automated PostgreSQL backups with encryption and cloud storage.
+
+**Step 1: Create Backup Role**
+```yaml
+# roles/database_backup/tasks/main.yml
+---
+- name: Install PostgreSQL client
+  ansible.builtin.package:
+    name: postgresql-client
+    state: present
+
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    mode: '0750'
+
+- name: Perform database backup
+  ansible.builtin.command:
+    cmd: >
+      pg_dump -h {{ db_host }} -U {{ db_user }} -d {{ db_name }}
+      --format=custom --compress=9 --file={{ backup_dir }}/{{ db_name }}_{{ ansible_date_time.iso8601 }}.backup
+    environment:
+      PGPASSWORD: "{{ db_password }}"
+
+- name: Encrypt backup
+  ansible.builtin.command:
+    cmd: openssl enc -aes-256-cbc -salt -in {{ backup_file }} -out {{ backup_file }}.enc -k {{ encryption_key }}
+
+- name: Upload to S3
+  amazon.aws.aws_s3:
+    bucket: "{{ s3_bucket }}"
+    object: "backups/{{ db_name }}/{{ ansible_date_time.iso8601 }}.backup.enc"
+    src: "{{ backup_file }}.enc"
+    mode: put
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+
+- name: Cleanup local files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ backup_file }}"
+    - "{{ backup_file }}.enc"
+```
+
+**Step 2: Schedule Automated Backups**
+```yaml
+# group_vars/aap_prod/schedules.yml
+controller_schedules_prod_backup:
+  - name: "Daily Database Backup"
+    description: "Automated backup of production databases"
+    job_template: "Database Backup"
+    rrule: "DTSTART;TZID=America/New_York:20260106T020000 RRULE:FREQ=DAILY;INTERVAL=1"
+    enabled: true
+    extra_vars:
+      db_name: "prod_database"
+      s3_bucket: "prod-backups-secure"
+```
+
+---
+
 ## Prerequisites
 
 ### 1. OpenShift Cluster Requirements
@@ -49,7 +195,7 @@ All 5 repositories must exist and be accessible:
 | `cluster-config` | Platform GitOps (ArgoCD) | `https://github.com/djdanielsson/rh1-cluster-config.git` |
 | `aap-config-as-code` | Application GitOps (AAP CaC) | `https://github.com/djdanielsson/rh1-aap-config-as-code.git` |
 | `automation-collection-example` | Collection template | `https://github.com/djdanielsson/rh1-custom-collection.git` |
-| `automation-ee-example` | Execution environment template | `https://github.com/djdanielsson/rh1-ee.git` |
+| `automation-ee-example` | Execution environment template | `https://github.com/djdanielsson/rh1-custom-ee.git` |
 | `automation-release-manifest` | Release BOM | `https://github.com/djdanielsson/rh1-release-manifest.git` |
 
 **Create Repositories**:
@@ -439,6 +585,8 @@ git log --oneline -10
 
 ### Scenario: Develop New Ansible Collection
 
+**Note**: This section shows how to create a new collection from scratch. For adding roles to existing collections, see the practical examples above.
+
 **Constitution Article IV**: Test-first, modular development
 
 #### Step 1: Clone Collection Template
@@ -448,12 +596,12 @@ git log --oneline -10
 git clone git@github.com:org/automation-collection-example.git my-new-collection
 cd my-new-collection
 
-# Initialize galaxy.yml
-ansible-galaxy collection init myorg.my_collection --init-path .
+# Initialize collection structure
+ansible-creator init collection myorg.my_collection
 
 # Create role with Molecule tests
 cd roles
-ansible-galaxy role init my_role --init-path .
+ansible-creator add resource role my_role
 cd my_role
 molecule init scenario default --driver-name docker
 ```
@@ -813,223 +961,36 @@ echo "Prod AAP: https://${PROD_URL}"
 
 ## Troubleshooting
 
-### Common Issues
+For comprehensive troubleshooting guidance, see the **[Troubleshooting Guide](./docs/TROUBLESHOOTING-GUIDE.md)** which covers:
 
-#### 1. ArgoCD Application Not Syncing
+- ArgoCD application sync issues
+- AAP instance startup problems
+- Pipeline failures and diagnostics
+- GitOps configuration drift
+- Emergency procedures
 
-**Symptoms**: `oc get applications -n openshift-gitops` shows "OutOfSync"
-
-**Diagnosis**:
-```bash
-# Check application status
-oc describe application cluster-bootstrap -n openshift-gitops
-
-# Check ArgoCD logs
-oc logs -n openshift-gitops -l app.kubernetes.io/name=openshift-gitops-application-controller
-```
-
-**Solutions**:
-- **Invalid Git URL**: Fix URL in Application spec
-- **Authentication failure**: Add Git credentials secret
-- **Sync wave conflicts**: Check annotations on resources
-- **Manual sync needed**: `oc patch application cluster-bootstrap -n openshift-gitops --type merge -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{}}}'`
-
-#### 2. AAP Instance Not Starting
-
-**Symptoms**: AAP pods in CrashLoopBackOff or Pending
-
-**Diagnosis**:
-```bash
-# Check AutomationController status
-oc describe automationcontroller aap-dev -n aap-dev
-
-# Check pod status
-oc get pods -n aap-dev
-oc describe pod <failing-pod> -n aap-dev
-oc logs <failing-pod> -n aap-dev
-```
-
-**Solutions**:
-- **Admin secret missing**: Create `aap-admin-password` secret
-- **Database connection failure**: Check `aap-postgres-config` secret
-- **Insufficient resources**: Increase node capacity or reduce resource requests
-- **Image pull failure**: Check operator subscription and image registry access
-
-#### 3. CaC Pipeline Fails
-
-**Symptoms**: PipelineRun shows "Failed" status
-
-**Diagnosis**:
-```bash
-# View pipeline logs
-tkn pipelinerun logs <run-name> -n dev-tools
-
-# Check specific task
-tkn pipelinerun describe <run-name> -n dev-tools
-```
-
-**Solutions**:
-- **Authentication error**: Regenerate AAP API token, update secret
-- **Ansible syntax error**: Fix YAML in group_vars/
-- **Collection not found**: Update requirements.yml in CaC repo
-- **Timeout**: Increase task timeout or check AAP API responsiveness
-
-#### 4. Promotion Pipeline Fails
-
-**Symptoms**: Promotion PipelineRun fails during EE build or CaC application
-
-**Diagnosis**:
-```bash
-# Check which task failed
-tkn pipelinerun describe <promotion-run> -n dev-tools
-
-# View logs for failed task
-tkn pipelinerun logs <promotion-run> -n dev-tools -t <task-name>
-```
-
-**Solutions**:
-- **EE build failure**: Check dependencies in execution-environment.yml
-- **Manifest parse error**: Validate YAML syntax in manifest file
-- **Commit not found**: Verify commit SHAs exist in repositories
-- **Registry push failure**: Check registry credentials secret
-- **CaC application failure**: See "CaC Pipeline Fails" above
-
-#### 5. Webhook Not Triggering Pipeline
-
-**Symptoms**: Push to Git doesn't trigger expected pipeline
-
-**Diagnosis**:
-```bash
-# Check EventListener is running
-oc get pods -n dev-tools -l eventlistener.tekton.dev/eventlistener
-
-# Check EventListener logs
-oc logs -n dev-tools -l eventlistener.tekton.dev/eventlistener=github-webhook-listener
-
-# Test webhook manually
-WEBHOOK_URL=$(oc get route el-github-webhook-listener -n dev-tools -o jsonpath='{.spec.host}')
-curl -X POST https://${WEBHOOK_URL} \
-  -H "X-GitHub-Event: push" \
-  -H "X-Hub-Signature: sha1=xxx" \
-  -d '{"ref":"refs/heads/main","repository":{"name":"aap-config-as-code"}}'
-```
-
-**Solutions**:
-- **EventListener not exposed**: Check Route exists and is accessible
-- **Webhook secret mismatch**: Regenerate secret, update GitHub webhook config
-- **Incorrect event type**: Check EventListener interceptor filters
-- **Firewall blocking**: Verify GitHub can reach OpenShift Route
+Common quick fixes:
+- **ArgoCD not syncing**: `oc patch application <app-name> -n openshift-gitops --type merge -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{}}}'`
+- **Pipeline stuck**: `tkn pipelinerun cancel <run-name> -n dev-tools`
+- **Check logs**: `tkn pipelinerun logs <run-name> -n dev-tools -f`
 
 ---
 
 ## Security Model
 
-### Constitution Article V: Zero-Trust Security
+The platform implements a comprehensive **zero-trust security model** based on Constitution Article V. For complete security guidance, see the **[Security Guide](./docs/SECURITY-GUIDE.md)** which covers:
 
-#### 1. Secret Management
+- Secret management and rotation procedures
+- RBAC enforcement and service account permissions
+- Network policy implementation
+- Audit logging and compliance validation
+- Multi-layer security architecture
 
-**Rule**: No secrets in Git (Article V.1)
-
-**Enforcement**:
-- Pre-commit hooks scan for secrets in all repos
-- PR validation pipeline includes secret scanning
-- CI/CD fails immediately if secret detected
-
-**Secret Storage**:
-- All secrets in OCP Secret objects (encrypted at rest)
-- AAP Credentials reference secrets by name, never contain values
-- Tekton pipelines mount secrets as files (not environment variables)
-
-**Secret Rotation**:
-```bash
-# Rotate AAP admin password
-NEW_PASSWORD=$(openssl rand -base64 32)
-oc patch secret aap-admin-password -n aap-prod \
-  --type merge -p "{\"data\":{\"password\":\"$(echo -n ${NEW_PASSWORD} | base64)\"}}"
-
-# Restart AAP to pick up new password
-oc delete pod -n aap-prod -l app.kubernetes.io/component=web
-
-# Update AAP API token
-# (regenerate via AAP UI, update aap-prod-api-credentials secret)
-```
-
-#### 2. RBAC Enforcement
-
-**ServiceAccounts** (Article V.3 - Least Privilege):
-
-| ServiceAccount | Namespace | Permissions | Used By |
-|----------------|-----------|-------------|---------|
-| `argocd-application-controller` | `openshift-gitops` | Create/update K8s resources | ArgoCD sync |
-| `tekton-cac-sa` | `dev-tools` | Read secrets, run pods | CaC pipeline |
-| `tekton-promotion-sa` | `dev-tools` | Read secrets, push images, run pods | Promotion pipeline |
-| `tekton-pr-sa` | `dev-tools` | Run pods (no secret access) | PR validation |
-
-**Verify RBAC**:
-```bash
-# List ServiceAccounts
-oc get sa -n dev-tools
-
-# Check permissions
-oc auth can-i --as=system:serviceaccount:dev-tools:tekton-cac-sa \
-  create pods -n dev-tools
-# Should return: yes
-
-oc auth can-i --as=system:serviceaccount:dev-tools:tekton-pr-sa \
-  get secrets -n dev-tools
-# Should return: no (PR pipeline doesn't need secrets)
-```
-
-#### 3. Network Policies
-
-**Isolation** (optional but recommended):
-
-```bash
-# Apply network policies to isolate namespaces
-oc apply -f - <<EOF
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: deny-from-other-namespaces
-  namespace: aap-prod
-spec:
-  podSelector: {}
-  policyTypes:
-  - Ingress
-  ingress:
-  - from:
-    - podSelector: {}  # Allow within namespace
-    - namespaceSelector:
-        matchLabels:
-          name: dev-tools  # Allow from Tekton pipelines
-EOF
-```
-
-#### 4. Audit Logging
-
-**Git Audit Trail** (Article I.3):
-```bash
-# All changes tracked in Git
-git log --all --oneline
-
-# Who created release 26.01.06.0?
-git log --all --grep="26.01.06.0"
-
-# What changed in prod AAP config?
-git log -- group_vars/aap_prod.yml
-
-# Full audit export
-git log --all --pretty=format:'%h|%an|%ae|%ad|%s' --date=iso > audit.csv
-```
-
-**Tekton Audit Trail**:
-```bash
-# All pipeline runs logged
-tkn pipelinerun list -n dev-tools --limit 100
-
-# Export for compliance
-oc get pipelineruns -n dev-tools -o json > pipelinerun-audit.json
-```
+**Key Security Principles**:
+- ✅ **No secrets in Git** - All secrets stored in OCP or HashiCorp Vault
+- ✅ **Least privilege** - ServiceAccounts have minimal required permissions
+- ✅ **Complete audit trail** - All changes tracked in Git and pipeline logs
+- ✅ **Automated validation** - Pre-commit hooks and CI/CD security scanning
 
 ---
 

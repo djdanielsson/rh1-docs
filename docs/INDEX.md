@@ -69,6 +69,8 @@ Production operations, upgrades, and disaster recovery.
 | [Disaster Recovery](./DISASTER-RECOVERY.md) | DR procedures and runbooks |
 | [AAP Upgrade Guide](./AAP-UPGRADE-GUIDE.md) | AAP version upgrade procedures |
 | [Multi-Cluster Guide](./MULTI-CLUSTER-GUIDE.md) | Multi-cluster deployment |
+| [Security Guide](./SECURITY-GUIDE.md) | Zero-trust security model |
+| [Troubleshooting Guide](./TROUBLESHOOTING-GUIDE.md) | Platform troubleshooting |
 
 ### 📖 Governance
 

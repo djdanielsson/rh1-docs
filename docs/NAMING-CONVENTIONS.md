@@ -653,27 +653,27 @@ This platform uses **Calendar Versioning** with a single tag promoted across all
 
 | Component | Description | Example |
 |-----------|-------------|---------|
-| **YY** | Two-digit year | `25` (2025) |
+| **YY** | Two-digit year | `26` (2026) |
 | **MM** | Two-digit month | `01` (January) |
-| **DD** | Two-digit day | `05` (5th) |
+| **DD** | Two-digit day | `06` (6th) |
 | **PATCH** | Hotfix number | `0` (first), `1` (hotfix) |
 
 **Tag Examples**:
 ```bash
 # Format: YY.MM.DD.PATCH
-25.01.05.0    # January 5, 2025 - Initial release
-25.01.05.1    # January 5, 2025 - Hotfix
-25.01.06.0    # January 6, 2025 - New release
-25.02.15.0    # February 15, 2025
+26.01.06.0    # January 6, 2026 - Initial release
+26.01.06.1    # January 6, 2026 - Hotfix
+26.01.07.0    # January 7, 2026 - New release
+26.02.15.0    # February 15, 2026
 
 # Same tag promotes through all environments:
 # dev → qa → prod (tracked via release manifest)
 
 # Not:
-26.01.06.0    # Wrong format (SemVer)
-26.01.06.0   # Wrong format (environment prefix)
+1.0.0         # Wrong format (SemVer)
+v26.01.06.0   # Wrong format (version prefix)
 latest        # Not immutable
-25.1.5.0      # Missing leading zeros
+26.1.6.0      # Missing leading zeros
 ```
 
 **Tag Message Guidelines**:

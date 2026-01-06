@@ -21,7 +21,6 @@ This is the project workspace containing all repositories and planning documenta
 - **[Dev Containers Guide](./docs/DEV-CONTAINERS-GUIDE.md)** - Development environments
 
 ### 📚 Reference
-- **[CI/CD Guide](./docs/CICD-GUIDE.md)** - Automation workflows
 - **[Naming Conventions](./docs/NAMING-CONVENTIONS.md)** - Naming standards
 - **[Code Style](./docs/CODE-STYLE-GUIDE.md)** - Style guide
 - **[CI/CD Guide](./docs/CICD-GUIDE.md)** - GitHub Actions and Tekton pipelines
@@ -39,7 +38,7 @@ rh1_ansible_code_lifecycle/              # Project workspace (NOT a git repo)
 │   ├── GIT-WORKFLOW.md                   # Branching, versioning, promotion
 │   ├── CICD-GUIDE.md                    # CI/CD workflows
 │   └── ...                              # 15+ guides
-├── specs/                               # Project specifications
+├── .specify/memory/                     # Project specifications
 │   └── 001-cloud-native-ansible-lifecycle/
 ├── tests/                               # Platform-wide tests
 │
@@ -104,7 +103,7 @@ All repositories follow the five articles:
 
 ## Getting Started
 
-1. **Read the Quickstart**: `./specs/001-cloud-native-ansible-lifecycle/quickstart.md`
+1. **Read the Constitution**: `./.specify/memory/constitution.md`
 2. **Bootstrap Platform**: Deploy ArgoCD and apply root-app.yaml
 3. **Configure AAP**: Push changes to aap-config-as-code
 4. **Develop Content**: Add roles to automation-collection-example
