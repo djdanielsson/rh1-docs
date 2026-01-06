@@ -6,7 +6,7 @@
 
 ## 🚀 Quick Start
 
-###Quick Commands
+### Quick Commands
 
 ```bash
 # Install in current repo
@@ -60,8 +60,8 @@ Pre-commit hooks enforce code quality, security, and constitutional compliance *
 |------------|------------|
 | **cluster-config** | Kubernetes YAML, ArgoCD apps, Tekton pipelines, no secrets, RBAC checks |
 | **aap-config-as-code** | Ansible syntax, idempotency, no plain secrets, naming conventions |
-| **automation-collection** | Python linting, Ansible lint, module docs, Molecule tests |
-| **automation-ee** | EE structure, version pinning, no latest tags, bindep validation |
+| **automation-collection-example** | Python linting, Ansible lint, module docs, Molecule tests |
+| **automation-ee-example** | EE structure, version pinning, no latest tags, bindep validation |
 | **automation-release-manifest** | Manifest structure, commit SHAs, image digests, semver |
 
 ---
@@ -135,17 +135,6 @@ pre-commit install --hook-type commit-msg
 # Optional: Run once to verify
 pre-commit run --all-files
 ```
-
-### Automated Setup Script
-
-Use the provided script to set up all repositories at once:
-
-```bash
-# From the root of the workspace
-./setup-precommit-all.sh
-```
-
----
 
 ## Repository-Specific Hooks
 

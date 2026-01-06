@@ -257,3 +257,379 @@ oc auth can-i '*' '*' --all-namespaces
 
 # 4. Enjoy your GitOps-managed AAP platform! 🚀
 ```
+
+---
+
+## Quickstart Guide (merged)
+
+**Purpose**: Complete bootstrap and operational guide for the GitOps Ansible platform  
+**Audience**: Platform operators, release managers, developers  
+**Prerequisites**: OpenShift cluster admin access
+
+---
+
+### Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Bootstrap Process](#bootstrap-process)
+3. [Validation](#validation)
+4. [Developer Workflow](#developer-workflow)
+5. [Release Workflow](#release-workflow)
+6. [Rollback Procedure](#rollback-procedure)
+7. [Troubleshooting](#troubleshooting)
+8. [Security Model](#security-model)
+
+---
+
+### Practical Examples and Use Cases
+
+#### Example 1: Web Application Deployment
+
+**Scenario**: Deploy Apache web server with custom configuration across dev/qa/prod environments.
+
+**Step 1: Add Role to Existing Collection**
+```bash
+# For this example, we'll add a role to the existing automation-collection-example
+# (See "Developer Workflow" section below for creating new collections from scratch)
+
+cd automation-collection-example
+ansible-creator add resource role webserver_deploy
+
+# Edit roles/webserver_deploy/tasks/main.yml
+cat > roles/webserver_deploy/tasks/main.yml << 'EOF'
+---
+- name: Install Apache
+  ansible.builtin.package:
+    name: httpd
+    state: present
+
+- name: Configure virtual host
+  ansible.builtin.template:
+    src: vhost.conf.j2
+    dest: /etc/httpd/conf.d/{{ app_name }}.conf
+  notify: restart_httpd
+
+- name: Deploy application files
+  ansible.builtin.copy:
+    src: "{{ app_source }}"
+    dest: "/var/www/{{ app_name }}"
+
+- name: Start and enable Apache
+  ansible.builtin.service:
+    name: httpd
+    state: started
+    enabled: true
+EOF
+```
+
+**Step 2: Configure AAP Job Template**
+```yaml
+# aap-config-as-code/group_vars/aap_dev/job_templates.yml
+controller_job_templates_dev_web:
+  - name: "Deploy Web App (Dev)"
+    description: "Deploy web application to dev servers"
+    job_type: run
+    organization: Applications
+    inventory: Dev Servers
+    project: Web Applications
+    playbook: playbooks/deploy_webapp.yml
+    execution_environment: Web EE (Dev)
+    credentials:
+      - Dev SSH Key
+    ask_variables_on_launch: true
+    extra_vars:
+      app_name: "mywebapp"
+      app_source: "/project/files/"
+```
+
+**Step 3: Promote to Production**
+```bash
+# Create release manifest
+cd automation-release-manifest
+cat > releases/release-26.01.06.0.yml << EOF
+version: "26.01.06.0"
+components:
+  aap_configuration: "$(git -C ../aap-config-as-code rev-parse HEAD)"
+  execution_environment: "$(git -C ../automation-ee-example rev-parse HEAD)"
+  collections: "$(git -C ../automation-collection-example rev-parse HEAD)"
+EOF
+
+# Tag and promote
+git add releases/release-26.01.06.0.yml
+git commit -m "Release 26.01.06.0 - Web app deployment"
+git tag 26.01.06.0
+git push origin 26.01.06.0
+# Automatic promotion to QA, then manual to prod
+```
+
+#### Example 2: Database Backup Automation
+
+**Scenario**: Automated PostgreSQL backups with encryption and cloud storage.
+
+**Step 1: Create Backup Role**
+```yaml
+# roles/database_backup/tasks/main.yml
+---
+- name: Install PostgreSQL client
+  ansible.builtin.package:
+    name: postgresql-client
+    state: present
+
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    mode: '0750'
+
+- name: Perform database backup
+  ansible.builtin.command:
+    cmd: >
+      pg_dump -h {{ db_host }} -U {{ db_user }} -d {{ db_name }}
+      --format=custom --compress=9 --file={{ backup_dir }}/{{ db_name }}_{{ ansible_date_time.iso8601 }}.backup
+    environment:
+      PGPASSWORD: "{{ db_password }}"
+
+- name: Encrypt backup
+  ansible.builtin.command:
+    cmd: openssl enc -aes-256-cbc -salt -in {{ backup_file }} -out {{ backup_file }}.enc -k {{ encryption_key }}
+
+- name: Upload to S3
+  amazon.aws.aws_s3:
+    bucket: "{{ s3_bucket }}"
+    object: "backups/{{ db_name }}/{{ ansible_date_time.iso8601 }}.backup.enc"
+    src: "{{ backup_file }}.enc"
+    mode: put
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+
+- name: Cleanup local files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ backup_file }}"
+    - "{{ backup_file }}.enc"
+```
+
+**Step 2: Schedule Automated Backups**
+```yaml
+# group_vars/aap_prod/schedules.yml
+controller_schedules_prod_backup:
+  - name: "Daily Database Backup"
+    description: "Automated backup of production databases"
+    job_template: "Database Backup"
+    rrule: "DTSTART;TZID=America/New_York:20260106T020000 RRULE:FREQ=DAILY;INTERVAL=1"
+    enabled: true
+    extra_vars:
+      db_name: "prod_database"
+      s3_bucket: "prod-backups-secure"
+```
+
+---
+
+### Prerequisites
+
+#### 1. OpenShift Cluster Requirements
+
+**Minimum Cluster Resources**:
+- **Nodes**: 3 worker nodes (for HA)
+- **CPU**: 40 cores total (5 dev + 10 qa + 20 prod + 5 platform)
+- **Memory**: 80Gi total (10Gi dev + 20Gi qa + 40Gi prod + 10Gi platform)
+- **Storage**: 200Gi total for PVCs
+- **OpenShift Version**: 4.12+
+
+**Check Cluster Capacity**:
+```bash
+# View node resources
+oc get nodes
+oc describe nodes | grep -A 5 "Allocated resources"
+
+# Check available storage classes
+oc get storageclass
+```
+
+#### 2. Git Repositories Created
+
+All 5 repositories must exist and be accessible:
+
+| Repository | Purpose | URL Pattern |
+|------------|---------|-------------|
+| `cluster-config` | Platform GitOps (ArgoCD) | `https://github.com/djdanielsson/rh1-cluster-config.git` |
+| `aap-config-as-code` | Application GitOps (AAP CaC) | `https://github.com/djdanielsson/rh1-aap-config-as-code.git` |
+| `automation-collection-example` | Collection template | `https://github.com/djdanielsson/rh1-custom-collection.git` |
+| `automation-ee-example` | Execution environment template | `https://github.com/djdanielsson/rh1-custom-ee.git` |
+| `automation-release-manifest` | Release BOM | `https://github.com/djdanielsson/rh1-release-manifest.git` |
+
+**Create Repositories**:
+```bash
+# Clone locally (you'll populate these during Phase 2-15)
+git clone git@github.com:org/cluster-config.git
+git clone git@github.com:org/aap-config-as-code.git
+# ... etc
+```
+
+#### 3. No Pre-Deployment Secrets Required! ✨
+
+- ✅ Namespaces created by ArgoCD (Wave -3)
+- ✅ AAP admin passwords auto-generated by operator
+- ✅ GitHub webhook secret created post-deployment (when you need it)
+
+#### 4. CLI Tools Installed
+
+Required:
+- oc, git, yq
+- Recommended: ansible, ansible-creator, ansible-lint, molecule, tkn
+
+Install examples:
+```bash
+oc version
+git --version
+yq --version
+```
+
+---
+
+### Bootstrap Process
+
+#### Phase 1: Install OpenShift GitOps Operator (Manual - One Time)
+
+```bash
+oc apply -f - <<EOF
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-gitops-operator
+  namespace: openshift-operators
+spec:
+  channel: latest
+  name: openshift-gitops-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+EOF
+oc wait --for=condition=Ready pod -l name=openshift-gitops-operator \
+  -n openshift-operators --timeout=300s
+```
+
+#### Phase 2: Bootstrap ArgoCD (App-of-Apps)
+```bash
+oc apply -f - <<EOF
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-bootstrap
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/org/cluster-config.git
+    targetRevision: main
+    path: argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: openshift-gitops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+EOF
+```
+
+#### Phase 3: Verify AAP Instances Deployed
+```bash
+oc get automationcontroller -A
+oc get pods -n aap-dev
+oc get pods -n aap-qa
+oc get pods -n aap-prod
+```
+
+#### Phase 4: Configure Initial AAP API Credentials
+```bash
+DEV_PASSWORD=$(oc get secret aap-dev-admin-password -n aap-dev -o jsonpath='{.data.password}' | base64 -d)
+DEV_URL=$(oc get route aap-dev -n aap-dev -o jsonpath='{.spec.host}')
+curl -k -X POST https://${DEV_URL}/api/v2/tokens/ \
+  -u admin:${DEV_PASSWORD} \
+  -H "Content-Type: application/json" \
+  -d '{"description":"CaC Pipeline Token","scope":"write"}' | jq -r '.token'
+```
+
+#### Phase 5: Run Initial CaC Pipeline
+```bash
+oc get pipeline -n dev-tools
+# Create PipelineRun with git_commit + target_environment params
+```
+
+---
+
+### Validation
+
+Checklist:
+- Operators installed
+- ArgoCD bootstrap synced
+- Namespaces created
+- AAP instances accessible
+- Tekton pipelines/triggers created
+- AAP credentials secrets created
+
+Smoke tests:
+```bash
+oc get applications -n openshift-gitops
+oc get pipeline -n dev-tools
+oc get route -n dev-tools | grep el-
+```
+
+---
+
+### Developer Workflow
+
+Scenario: create new collection
+1. Clone template `automation-collection-example`
+2. `ansible-creator init collection`
+3. Add role + Molecule tests (TDD)
+4. Run `molecule test`
+5. PR -> CI runs ansible-lint, molecule, secret scan
+6. After merge, trigger inner-loop pipeline to Dev AAP
+
+---
+
+### Release Workflow
+
+Scenario: promote collection to QA/Prod
+1. Create release manifest with component SHAs/tags
+2. Tag release (YY.MM.DD.PATCH)
+3. Promotion pipeline (qa then prod) using same manifest (atomic)
+4. Monitor via `tkn pipelinerun logs`
+
+---
+
+### Rollback Procedure
+
+Option A: re-promote previous tag  
+Option B: create new manifest pointing to previous commits, tag, promote
+
+---
+
+### Troubleshooting
+
+- ArgoCD not syncing: patch application to force sync
+- Pipeline stuck: `tkn pipelinerun cancel`
+- Check logs: `tkn pipelinerun logs -f`
+
+---
+
+### Security Model
+
+- No secrets in Git; use OCP secrets or Vault
+- Least privilege RBAC
+- Enforce no `:latest` in prod, prefer digests
+- Pre-commit and CI security scanning
+
+---

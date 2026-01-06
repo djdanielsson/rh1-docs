@@ -140,8 +140,8 @@ docs/
 ### Release Manager
 
 1. [Git Workflow](./GIT-WORKFLOW.md)
-3. [Promotion Flow](./diagrams/PROMOTION-FLOW.md)
-4. [CI/CD Guide](./CICD-GUIDE.md)
+2. [Promotion Flow](./diagrams/PROMOTION-FLOW.md)
+3. [CI/CD Guide](./CICD-GUIDE.md)
 
 ### Operations
 

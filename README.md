@@ -28,7 +28,7 @@ This is the project workspace containing all repositories and planning documenta
 ## Repository Structure
 
 ```
-rh1_ansible_code_lifecycle/              # Project workspace (NOT a git repo)
+rh1_ansible_code_lifecycle/              # Project workspace repo (docs + component repos)
 ├── README.md                            # This file - platform overview
 ├── docs/                                # All documentation
 │   ├── INDEX.md                         # Documentation index
