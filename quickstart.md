@@ -588,8 +588,8 @@ EE_SHA=$(cd ../automation-ee-example && git rev-parse HEAD)
 COLLECTION_SHA=$(cd ../my-new-collection && git rev-parse HEAD)
 
 # Create manifest file
-cat > releases/release-v1.0.0.yml <<EOF
-version: "1.0.0"
+cat > releases/release-26.01.06.0.yml <<EOF
+version: "26.01.06.0"
 
 components:
   # Required components
@@ -602,7 +602,7 @@ components:
 metadata:
   release_date: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   approver: "$(git config user.name) <$(git config user.email)>"
-  changelog_url: "https://github.com/org/automation-release-manifest/releases/tag/v1.0.0"
+  changelog_url: "https://github.com/org/automation-release-manifest/releases/tag/26.01.06.0"
   target_environments: ["qa", "prod"]
   jira_ticket: "INFRA-1234"
   notes: |
@@ -616,12 +616,12 @@ metadata:
 EOF
 
 # Validate manifest
-yq eval '.' releases/release-v1.0.0.yml
+yq eval '.' releases/release-26.01.06.0.yml
 # Check: valid YAML, all SHAs are 40 characters
 
 # Commit and push
-git add releases/release-v1.0.0.yml
-git commit -m "Release v1.0.0 - Initial production release"
+git add releases/release-26.01.06.0.yml
+git commit -m "Release 26.01.06.0 - Initial production release"
 git push origin main
 ```
 
@@ -629,15 +629,15 @@ git push origin main
 
 ```bash
 # Create and push Git tag
-git tag -a v1.0.0 -m "Release v1.0.0"
-git push origin v1.0.0
+git tag -a 26.01.06.0 -m "Release 26.01.06.0"
+git push origin 26.01.06.0
 
 # This triggers promotion-pipeline webhook
 ```
 
 **Automatic Promotion to QA**:
 - GitHub webhook triggers `promotion-pipeline`
-- Parameters: `release_tag=v1.0.0`, `target_environment=qa`
+- Parameters: `release_tag=26.01.06.0`, `target_environment=qa`
 - Pipeline executes:
   1. Parse manifest, extract commit SHAs
   2. Clone EE repo at `${EE_SHA}`, build image
@@ -672,7 +672,7 @@ echo "QA AAP: https://${QA_URL}"
 
 # If issues found:
 # - Fix in Git (new commit)
-# - Create v1.0.1 manifest
+# - Create 26.01.06.1 manifest
 # - Re-promote
 
 # If validation passes:
@@ -687,14 +687,14 @@ oc create -f - <<EOF
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  generateName: promotion-prod-v1.0.0-
+  generateName: promotion-26.01.06.0-
   namespace: dev-tools
 spec:
   pipelineRef:
     name: promotion-pipeline
   params:
   - name: release_tag
-    value: "v1.0.0"
+    value: "26.01.06.0"
   - name: target_environment
     value: "prod"  # Changed from qa to prod
   workspaces:
@@ -727,12 +727,12 @@ tkn pipelinerun logs -f -n dev-tools <run-name>
 #### Step 1: Identify Issue
 
 ```bash
-# Current production: v1.0.0 (broken)
-# Previous production: v0.9.0 (known good)
+# Current production: 26.01.06.0 (broken)
+# Previous production: 25.12.31.0 (known good)
 
 # Verify previous manifest exists
 cd /path/to/automation-release-manifest
-git show v0.9.0:releases/release-v0.9.0.yml
+git show 25.12.31.0:releases/release-25.12.31.0.yml
 ```
 
 #### Step 2: Execute Rollback
@@ -740,19 +740,19 @@ git show v0.9.0:releases/release-v0.9.0.yml
 **Option A: Re-promote Previous Version** (Recommended)
 
 ```bash
-# Simply promote v0.9.0 to prod
+# Simply promote 25.12.31.0 to prod
 oc create -f - <<EOF
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  generateName: rollback-prod-v0.9.0-
+  generateName: rollback-25.12.31.0-
   namespace: dev-tools
 spec:
   pipelineRef:
     name: promotion-pipeline
   params:
   - name: release_tag
-    value: "v0.9.0"  # Previous good version
+    value: "25.12.31.0"  # Previous good version
   - name: target_environment
     value: "prod"
   workspaces:
@@ -772,20 +772,20 @@ EOF
 **Option B: Create New Manifest Pointing to Old Commits** (Better audit trail)
 
 ```bash
-# Copy v0.9.0 manifest to v1.0.1
-cp releases/release-v0.9.0.yml releases/release-v1.0.1.yml
+# Copy 25.12.31.0 manifest to 26.01.06.1
+cp releases/release-25.12.31.0.yml releases/release-26.01.06.1.yml
 
 # Update metadata
-yq eval -i '.version = "1.0.1"' releases/release-v1.0.1.yml
-yq eval -i '.metadata.release_date = "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"' releases/release-v1.0.1.yml
-yq eval -i '.metadata.approver = "'$(git config user.name)' <'$(git config user.email)>'>"' releases/release-v1.0.1.yml
-yq eval -i '.metadata.notes = "ROLLBACK: Revert to v0.9.0 due to production issue in v1.0.0"' releases/release-v1.0.1.yml
+yq eval -i '.version = "26.01.06.1"' releases/release-26.01.06.1.yml
+yq eval -i '.metadata.release_date = "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"' releases/release-26.01.06.1.yml
+yq eval -i '.metadata.approver = "'$(git config user.name)' <'$(git config user.email)>'>"' releases/release-26.01.06.1.yml
+yq eval -i '.metadata.notes = "ROLLBACK: Revert to 25.12.31.0 due to production issue in 26.01.06.0"' releases/release-26.01.06.1.yml
 
 # Commit, tag, push
-git add releases/release-v1.0.1.yml
-git commit -m "Release v1.0.1 - Rollback to v0.9.0 components"
-git tag -a v1.0.1 -m "Rollback release"
-git push origin main v1.0.1
+git add releases/release-26.01.06.1.yml
+git commit -m "Release 26.01.06.1 - Rollback to 25.12.31.0 components"
+git tag -a 26.01.06.1 -m "Rollback release"
+git push origin main 26.01.06.1
 
 # Automatic promotion triggered by webhook
 ```
@@ -801,8 +801,8 @@ PROD_URL=$(oc get route aap-prod -n aap-prod -o jsonpath='{.spec.host}')
 echo "Prod AAP: https://${PROD_URL}"
 
 # Check:
-# - EE reverted to v0.9.0 version
-# - Projects synced to v0.9.0 commits
+# - EE reverted to 25.12.31.0 version
+# - Projects synced to 25.12.31.0 commits
 # - Jobs running successfully
 # - Issue resolved
 ```
@@ -1012,8 +1012,8 @@ EOF
 # All changes tracked in Git
 git log --all --oneline
 
-# Who created release v1.0.0?
-git log --all --grep="v1.0.0"
+# Who created release 26.01.06.0?
+git log --all --grep="26.01.06.0"
 
 # What changed in prod AAP config?
 git log -- group_vars/aap_prod.yml

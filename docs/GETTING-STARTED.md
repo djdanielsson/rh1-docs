@@ -140,7 +140,7 @@ cat cluster-config/QUICKREF.md
 - [ ] **Create automation-release-manifest repository**
   - Create releases/ directory
   - Add manifest schema
-  - Create first release manifest (v1.0.0)
+  - Create first release manifest (25.01.05.0)
 
 ## 📁 Repository Status
 

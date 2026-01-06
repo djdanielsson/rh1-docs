@@ -169,8 +169,8 @@ git push
 ### Atomic Promotion
 ```bash
 # Create release manifest
-cat > automation-release-manifest/releases/v1.0.0.yaml <<EOF
-version: "1.0.0"
+cat > automation-release-manifest/releases/26.01.06.0.yaml <<EOF
+version: "26.01.06.0"
 components:
   aap_configuration: "abc123..."
   execution_environment: "def456..."
@@ -178,8 +178,8 @@ components:
 EOF
 
 # Tag and push
-git tag v1.0.0
-git push origin v1.0.0
+git tag 26.01.06.0
+git push origin 26.01.06.0
 
 # Promotion pipeline deploys to QA
 ```
