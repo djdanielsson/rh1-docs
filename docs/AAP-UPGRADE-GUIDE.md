@@ -340,7 +340,7 @@ git push origin main
 
 ## Related Documents
 
-- [VERSIONING-STRATEGY.md](./VERSIONING-STRATEGY.md) - Version management
+- [GIT-WORKFLOW.md](./GIT-WORKFLOW.md) - Versioning and promotion
 - [DISASTER-RECOVERY.md](./DISASTER-RECOVERY.md) - Rollback procedures
 - [EE-VERSIONING-STRATEGY.md](./EE-VERSIONING-STRATEGY.md) - EE updates
 

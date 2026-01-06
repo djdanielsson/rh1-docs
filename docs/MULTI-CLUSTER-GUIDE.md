@@ -280,6 +280,6 @@ Users → Cluster A (active)
 
 - [DISASTER-RECOVERY.md](./DISASTER-RECOVERY.md) - DR procedures
 - [DEPLOYMENT.md](../cluster-config/DEPLOYMENT.md) - Initial deployment
-- [VERSIONING-STRATEGY.md](./VERSIONING-STRATEGY.md) - Version management
+- [GIT-WORKFLOW.md](./GIT-WORKFLOW.md) - Versioning and promotion
 
 

@@ -173,19 +173,23 @@ oc get applications -n openshift-gitops
 Use the rollback script to deploy a previous version:
 
 ```bash
-cd automation-release-manifest
-
 # View available versions
-ls releases/
+ls automation-release-manifest/releases/
 
-# Rollback to previous version
-./scripts/rollback.sh 25.01.04.0 prod
+# Rollback to previous version using Tekton pipeline
+tkn pipeline start rollback \
+  -p TARGET_VERSION=25.01.04.0 \
+  -p ENVIRONMENT=prod \
+  -p REASON="Rollback due to incident" \
+  -w name=source,volumeClaimTemplateFile=pvc-template.yaml \
+  -w name=aap-config,volumeClaimTemplateFile=pvc-template.yaml
 
 # This will:
-# 1. Update release manifest to point to previous version
-# 2. Trigger promotion pipeline for that environment
-# 3. Apply previous CaC configuration
-# 4. Previous EE image will be pulled
+# 1. Validate target version manifest exists
+# 2. Extract component versions from manifest
+# 3. Checkout exact AAP config commit
+# 4. Apply previous CaC configuration
+# 5. Record rollback in manifest history
 ```
 
 ### Platform Rollback (Kubernetes Resources)
@@ -239,7 +243,7 @@ git push origin main
 ## Related Documents
 
 - [DEPLOYMENT.md](../cluster-config/DEPLOYMENT.md) - Initial deployment
-- [VERSIONING-STRATEGY.md](./VERSIONING-STRATEGY.md) - Version management
+- [GIT-WORKFLOW.md](./GIT-WORKFLOW.md) - Versioning and promotion
 - [CICD-GUIDE.md](./CICD-GUIDE.md) - Pipeline operations
 
 

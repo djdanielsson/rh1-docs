@@ -887,7 +887,7 @@ podman push ee:prod-v1.0.0
 
 ## 📚 Related Documentation
 
-- [Branching Strategy](./BRANCHING-STRATEGY.md) - Git tagging conventions
+- [Git Workflow](./GIT-WORKFLOW.md) - Branching and versioning
 - [Promotion Flow Diagrams](./diagrams/PROMOTION-FLOW.md) - Visual workflows
 - [CI/CD Guide](./CICD-GUIDE.md) - Build automation
 - [Release Manifests](./diagrams/REPOSITORY-STRUCTURE.md) - Manifest structure

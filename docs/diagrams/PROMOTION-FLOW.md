@@ -200,7 +200,7 @@ Change: CHG0001234"
 git push origin prod-v1.0.0
 ```
 
-**See**: [BRANCHING-STRATEGY.md](../BRANCHING-STRATEGY.md) for complete workflow
+**See**: [GIT-WORKFLOW.md](../GIT-WORKFLOW.md) for complete workflow
 
 ---
 
