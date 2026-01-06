@@ -2413,13 +2413,3 @@ Before committing code, verify:
         name: auditd
         state: restarted
 ```
-
----
-
-**Version**: 2.0
-**Last Updated**: 2025-10-30
-**Status**: ✅ Aligned with Red Hat CoP and ansible-lint rules
-**References**: Red Hat CoP, ansible-lint, Ansible official docs
-
-
-

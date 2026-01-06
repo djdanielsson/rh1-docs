@@ -314,8 +314,3 @@ tkn pipelinerun cancel <run-name> -n dev-tools
 # Force delete if needed
 oc delete pipelinerun <run-name> -n dev-tools --force
 ```
-
----
-
-**Last Updated**: 2026-01-06
-**Maintained By**: Platform Team

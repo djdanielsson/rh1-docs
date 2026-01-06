@@ -482,8 +482,3 @@ graph TB
 - **Configuration**: Git → ArgoCD → Kubernetes → AAP
 - **Content**: Git → Tekton → Registry/Galaxy → AAP
 - **Promotion**: Manifest → Dev → QA → Prod (atomic)
-
----
-
-**Constitutional Alignment**: ✅ All 5 articles implemented and enforced through architecture
-

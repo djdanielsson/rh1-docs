@@ -439,9 +439,3 @@ jobs:
 - **Ansible Best Practices**: [./ANSIBLE-BEST-PRACTICES.md](./ANSIBLE-BEST-PRACTICES.md)
 - **Code Style Guide**: [./CODE-STYLE-GUIDE.md](./CODE-STYLE-GUIDE.md)
 - **Pre-commit Docs**: https://pre-commit.com/
-
----
-
-**Version**: 2.0 (Consolidated)
-**Last Updated**: 2025-01-04
-

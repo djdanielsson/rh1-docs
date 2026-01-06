@@ -729,8 +729,3 @@ sequenceDiagram
 - ✅ **Article III**: Atomic promotion via manifests
 - ✅ **Article IV**: Quality gates at each stage
 - ✅ **Article V**: No secrets in manifests
-
----
-
-**Result**: Safe, predictable, auditable promotion workflow
-

@@ -180,8 +180,3 @@ YY.MM.DD.PATCH
 25.01.05.0  # January 5, 2025, initial release
 25.01.05.1  # January 5, 2025, hotfix
 ```
-
----
-
-**Last Updated**: 2025-01-05  
-**Maintained By**: Platform Team

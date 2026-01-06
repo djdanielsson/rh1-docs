@@ -529,8 +529,3 @@ graph TB
 - **Safety**: Declarative infra, tested apps
 - **Traceability**: All changes tracked in Git
 - **Atomic Promotion**: Coordinated via manifests
-
----
-
-**Constitutional Compliance**: ✅ Article I (GitOps First) implemented through dual loops
-

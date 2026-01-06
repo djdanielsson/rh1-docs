@@ -333,9 +333,3 @@ version: 1.2.3
 - **Platform Config**: `cluster-config/`
 - **Molecule Docs**: https://molecule.readthedocs.io/
 - **Ansible-Lint**: https://ansible-lint.readthedocs.io/
-
----
-
-**Last Updated**: 2025-10-29
-**Maintained By**: Platform Team
-

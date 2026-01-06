@@ -405,5 +405,3 @@ flowchart TD
 - ✅ Atomic promotion (code + EE + CaC together)
 - ✅ Easy rollback (revert CaC tag to previous version)
 - ✅ Clear audit trail (CaC tag shows what config was applied)
-
-
