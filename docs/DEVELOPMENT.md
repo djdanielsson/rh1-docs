@@ -159,16 +159,17 @@ webserver_ssl_enabled: false
 
 ## Versioning
 
-Follow Semantic Versioning in `galaxy.yml`:
+Follow Calendar Versioning (CalVer) in `galaxy.yml`:
 
 ```yaml
-version: 1.2.3
-# MAJOR.MINOR.PATCH
+version: 25.01.05.0
+# YY.MM.DD.PATCH
 ```
 
-- **MAJOR**: Breaking changes
-- **MINOR**: New features (backward compatible)
-- **PATCH**: Bug fixes
+- **YY**: Year (25 = 2025)
+- **MM**: Month (01 = January)
+- **DD**: Day (05 = 5th)
+- **PATCH**: Increment for same-day releases (0, 1, 2...)
 
 ---
 
