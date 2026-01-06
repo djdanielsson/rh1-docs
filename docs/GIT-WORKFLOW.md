@@ -2,21 +2,16 @@
 
 **Trunk-Based Development with CalVer Tags**
 
-**Status**: 🟢 Active  
-**Effective Date**: 2025-01-05
-
 ---
 
 ## Overview
 
-This platform uses **Trunk-Based Development** with **CalVer (YY.MM.DD.PATCH)** tags for release management. This approach provides:
+This platform uses **Trunk-Based Development** with **CalVer (YY.MM.DD.PATCH)** for release management.
 
-- ✅ **Single source of truth** - One `main` branch, no environment branches
-- ✅ **Instant date visibility** - Know exactly when something was released
+- ✅ **Single source of truth** - One `main` branch
+- ✅ **Instant date visibility** - Know when something was released
 - ✅ **Atomic promotion** - Same tag promotes through all environments
-- ✅ **Fast integration** - Frequent merges reduce conflicts
 - ✅ **Easy rollback** - Revert to any previous tag
-- ✅ **AAP Integration** - AAP Projects checkout specific tags
 
 ---
 
@@ -26,31 +21,28 @@ This platform uses **Trunk-Based Development** with **CalVer (YY.MM.DD.PATCH)** 
 YY.MM.DD.PATCH
 ```
 
-| Component | Description | Values | Example |
-|-----------|-------------|--------|---------|
-| **YY** | Two-digit year | `00-99` | `25` (2025) |
-| **MM** | Two-digit month | `01-12` | `01` (January) |
-| **DD** | Two-digit day | `01-31` | `05` (5th) |
-| **PATCH** | Hotfix number | `0-N` | `0` (first), `1` (hotfix) |
+| Component | Description | Example |
+|-----------|-------------|---------|
+| YY | Two-digit year | `25` (2025) |
+| MM | Two-digit month | `01` (January) |
+| DD | Two-digit day | `05` (5th) |
+| PATCH | Hotfix number | `0` (first), `1` (hotfix) |
 
 ### Examples
 
 ```
-26.01.06.0    # January 6, 2026 - Initial release
-26.01.06.1    # January 6, 2026 - Hotfix 1
-26.01.06.2    # January 6, 2026 - Hotfix 2
-26.01.07.0    # January 7, 2026 - New release
-26.02.15.0    # February 15, 2026 - New release
+25.01.05.0    # January 5, 2025 - Initial
+25.01.05.1    # Same day hotfix
+25.01.06.0    # Next day release
 ```
 
-### Version Rules
+### Rules
 
-| Scenario | Action | Example |
-|----------|--------|---------|
-| New release | Use today's date, PATCH=0 | `26.01.06.0` |
-| Same-day hotfix | Increment PATCH | `26.01.06.1` |
-| Next day release | New date, PATCH=0 | `26.01.07.0` |
-| Skip days | Use actual release date | `26.01.10.0` after `26.01.06.0` |
+| Scenario | Action |
+|----------|--------|
+| New release | Today's date, PATCH=0 |
+| Same-day hotfix | Increment PATCH |
+| Next day | New date, PATCH=0 |
 
 ---
 
@@ -58,60 +50,30 @@ YY.MM.DD.PATCH
 
 ### Main Branch
 
-**Branch**: `main`
-
-**Purpose**: Single source of truth for all development
-
-**Rules**:
-- ❌ No direct commits (except initial setup)
-- ✅ All changes via Pull Request
-- ✅ Must pass CI/CD checks
-- ✅ Requires code review approval
-- ✅ Always in a releasable state
+- **No direct commits** (except initial setup)
+- All changes via Pull Request
+- Must pass CI/CD checks
+- Always releasable
 
 ### Feature Branches
 
 **Naming**: `feature/<description>` or `feat/<description>`
 
-**Lifespan**: Short-lived (hours to days, not weeks)
+**Lifespan**: Short-lived (hours to days)
 
 ```bash
-git checkout -b feature/add-monitoring main
+git checkout -b feature/add-webserver-role main
 # ... develop ...
-git push origin feature/add-monitoring
-# Create PR, get approval, merge, delete branch
+git push origin feature/add-webserver-role
+# Create PR, merge, delete branch
 ```
-
-**Examples**:
-- `feature/add-webserver-role`
-- `feature/update-ee-dependencies`
-- `feature/configure-backup-job`
-
-### Fix Branches
-
-**Naming**: `fix/<description>` or `bugfix/<description>`
-
-**Examples**:
-- `fix/webserver-port-binding`
-- `fix/inventory-syntax-error`
 
 ### Hotfix Branches
 
-**Naming**: `hotfix/<description>`
-
-**Purpose**: Emergency fixes for production
-
 ```bash
-# Branch from previous release tag
-git checkout -b hotfix/critical-security-fix 25.01.05.0
-
-# Fix the issue
-git commit -m "fix: patch critical vulnerability"
-
-# Merge to main
-git checkout main && git merge hotfix/critical-security-fix
-
-# Create hotfix tag (increment PATCH)
+git checkout -b hotfix/critical-fix 25.01.05.0
+git commit -m "fix: patch vulnerability"
+git checkout main && git merge hotfix/critical-fix
 git tag -a 25.01.05.1 -m "Hotfix: security patch"
 git push origin 25.01.05.1
 ```
@@ -120,119 +82,78 @@ git push origin 25.01.05.1
 
 ## Git Tags
 
-### Single Tag Across All Environments
+### Single Tag Across Environments
 
 **One tag promotes through dev → qa → prod:**
 
-| Environment | Tag | Notes |
-|-------------|-----|-------|
-| **Dev** | `25.01.05.0` | First deployment |
-| **QA** | `25.01.05.0` | Same tag promoted |
-| **Prod** | `25.01.05.0` | Same tag promoted |
+| Environment | Tag |
+|-------------|-----|
+| Dev | `25.01.05.0` |
+| QA | `25.01.05.0` (same) |
+| Prod | `25.01.05.0` (same) |
 
-**Benefits:**
-- ✅ True atomic promotion - same artifact everywhere
-- ✅ Simplified management - no environment-specific tags
-- ✅ Clear audit trail via release manifest
-- ✅ Reduces tag sprawl by 66%
+### Tag Rules
 
-### Tag Characteristics
-
-- Created manually when ready for release
-- Immutable (never deleted or moved)
-- Same tag used across all environments
-- Release manifest tracks deployment status per environment
+- ✅ Created when ready for release
+- ✅ **IMMUTABLE** - never deleted or moved
+- ✅ Same tag across all environments
+- ❌ Never force-push or reuse tags
 
 ---
 
 ## Promotion Workflow
 
-```mermaid
-stateDiagram-v2
-    [*] --> FeatureBranch: Create feature branch
-    FeatureBranch --> PullRequest: Push and open PR
-    PullRequest --> Main: Approved and merged
-    Main --> DevDeployed: Auto-deploy to Dev
-    DevDeployed --> ReleaseTag: Create YY.MM.DD.PATCH tag
-    ReleaseTag --> QADeployed: Promote to QA
-    QADeployed --> QAValidated: QA testing
-    QAValidated --> ProdDeployed: CAB approval → Deploy
-    ProdDeployed --> [*]: Release complete
+```
+Feature Branch → Main → Tag → Dev → QA → Prod
 ```
 
 ### 1. Development
 
-**Trigger**: Merge to `main` or tag creation
-
 ```bash
-# Create release tag
 git tag -a 25.01.05.0 -m "Release January 5, 2025"
 git push origin 25.01.05.0
-
-# Tekton deploys to dev automatically
+# Auto-deploys to dev
 ```
-
-**AAP Project**: Tracks specific tag, Update on Launch: ❌
 
 ### 2. QA Promotion
 
-**Trigger**: Tekton promote pipeline
-
 ```bash
-# Promote to QA
 tkn pipeline start promote \
   -p VERSION=25.01.05.0 \
   -p FROM_ENVIRONMENT=dev \
   -p TO_ENVIRONMENT=qa
 ```
 
-**Gates**:
-- ✅ Dev tests passed
-- ✅ Code review completed
-- ✅ QA Lead approval
-
 ### 3. Production Promotion
 
-**Trigger**: Tekton promote pipeline with CAB approval
-
 ```bash
-# Promote to production
 tkn pipeline start promote \
   -p VERSION=25.01.05.0 \
   -p FROM_ENVIRONMENT=qa \
   -p TO_ENVIRONMENT=prod
 ```
 
-**Gates**:
-- ✅ QA testing completed
-- ✅ QA sign-off
-- ✅ Security scan passed
-- ✅ CAB approval received
-- ✅ Change window scheduled
-- ✅ Rollback plan documented
+**Production Gates**: QA sign-off, security scan, CAB approval
 
 ---
 
 ## Component Versioning
 
-All components use the same YY.MM.DD.PATCH format:
+All components use the same `YY.MM.DD.PATCH` format:
 
 ### Ansible Collections
 
 ```yaml
 # galaxy.yml
-namespace: myorg
-name: custom_collection
 version: "25.01.05.0"
 ```
 
 ### Execution Environments
 
 ```bash
-# Image tags
 quay.io/myorg/automation-ee:25.01.05.0
 
-# With SHA digest (recommended for prod)
+# With digest (recommended for prod)
 quay.io/myorg/automation-ee@sha256:abc123...
 ```
 
@@ -241,60 +162,89 @@ quay.io/myorg/automation-ee@sha256:abc123...
 ```yaml
 controller_projects:
   - name: "Automation Collection - Prod"
-    scm_url: "https://github.com/org/aap-config-as-code"
-    scm_branch: "25.01.05.0"  # Specific tag
+    scm_branch: "25.01.05.0"  # Specific tag, not main
     scm_update_on_launch: false
 ```
 
 ### Release Manifests
 
 ```yaml
-# releases/release-25.01.05.0.yaml
 version: "25.01.05.0"
-created: "2025-01-05T10:00:00Z"
-
 components:
   aap_configuration:
     commit: "abc123..."
     tag: "25.01.05.0"
-  collections:
-    version: "25.01.05.0"
   execution_environment:
     tag: "25.01.05.0"
     digest: "sha256:fedcba..."
-
-environments:
-  dev:
-    deployed_at: "2025-01-05T09:00:00Z"
-  qa:
-    deployed_at: "2025-01-05T11:00:00Z"
-    validated: true
-  prod:
-    deployed_at: "2025-01-05T15:00:00Z"
-    approved_by: "CAB"
 ```
 
-**All components must match:**
+---
+
+## Execution Environment Versioning
+
+### Core Principle
+
+> **Every code release tag has a corresponding EE image tag**
+
+```
+Code Tag: 25.01.05.0  →  EE Image: my-registry/ee:25.01.05.0
+```
+
+### Tag Types
+
+| Type | Format | Mutable? | Use |
+|------|--------|----------|-----|
+| Version | `25.01.05.0` | No | All environments |
+| SHA | `sha-abc123` | No | Traceability |
+| dev-latest | `dev-latest` | Yes | Dev only |
+
+### EE Build Process
+
+```bash
+# Build with version tag
+ansible-builder build \
+  --tag "quay.io/myorg/automation-ee:${VERSION}" \
+  --tag "quay.io/myorg/automation-ee:sha-$(git rev-parse HEAD)"
+
+podman push "quay.io/myorg/automation-ee:${VERSION}"
+```
+
+### AAP EE Configuration
 
 ```yaml
-# ✅ CORRECT - Synchronized
-Release: 25.01.05.0
-  ├── AAP Config:   25.01.05.0
-  ├── Collection:   25.01.05.0
-  └── EE Image:     25.01.05.0
+# Lock to specific version
+controller_execution_environments:
+  - name: "Automation EE - 25.01.05.0"
+    image: "quay.io/myorg/automation-ee:25.01.05.0"
+    # Or use digest
+    # image: "quay.io/myorg/automation-ee@sha256:abc123..."
+    pull: "missing"
 
-# ❌ WRONG - Mismatched
-Release: 25.01.05.0
-  ├── AAP Config:   25.01.05.0
-  ├── Collection:   25.01.04.0  # ❌ Wrong
-  └── EE Image:     25.01.05.1  # ❌ Wrong
+controller_templates:
+  - name: "Deploy Webserver - Prod"
+    scm_branch: "25.01.05.0"  # Match code version
+    execution_environment: "Automation EE - 25.01.05.0"
+```
+
+### Pin Dependencies
+
+```yaml
+# requirements.yml - Always pin versions
+collections:
+  - name: ansible.posix
+    version: "1.5.4"
+
+# requirements.txt - Always pin versions
+jmespath==1.0.1
+netaddr==0.9.0
 ```
 
 ---
 
 ## Rollback
 
-### Using Tekton Pipeline (Recommended)
+### Using Tekton Pipeline
 
 ```bash
 tkn pipeline start rollback \
@@ -302,16 +252,11 @@ tkn pipeline start rollback \
   -p ENVIRONMENT=prod
 ```
 
-### Creating Audit Trail
+### Using Git
 
 ```bash
-# Current: 25.01.05.1 (has issues)
-# Create new release pointing to previous commit
-git tag -a 25.01.06.0 -m "Rollback to 25.01.05.0 state
-
-Rolled back from: 25.01.05.1
-Reason: Critical issue in webserver
-Rollback approved: CHG0001236"
+# Create new tag pointing to previous state
+git tag -a 25.01.06.0 -m "Rollback to 25.01.05.0 state"
 ```
 
 ---
@@ -319,221 +264,59 @@ Rollback approved: CHG0001236"
 ## Complete Workflow Example
 
 ```bash
-# === Developer Workflow ===
-
 # 1. Create feature branch
 git checkout main && git pull
 git checkout -b feature/add-webserver-role
 
-# 2. Develop and test locally
+# 2. Develop and test
 molecule test
 
 # 3. Push and create PR
 git push origin feature/add-webserver-role
 gh pr create --title "Add webserver role"
 
-# === After PR Approval ===
-
-# 4. Merge to main
+# 4. After approval, merge
 gh pr merge --squash
 
 # 5. Create release tag
 git checkout main && git pull
-git tag -a 25.01.05.0 -m "Release January 5, 2025: Add webserver role"
+git tag -a 25.01.05.0 -m "Release: Add webserver role"
 git push origin 25.01.05.0
 
-# === Promotion ===
-
-# 6. Auto-deployed to Dev
-# 7. Promote to QA after dev validation
+# 6. Promote to QA
 tkn pipeline start promote -p VERSION=25.01.05.0 -p FROM=dev -p TO=qa
 
-# 8. QA validates, then promote to prod
+# 7. After QA validation, promote to prod
 tkn pipeline start promote -p VERSION=25.01.05.0 -p FROM=qa -p TO=prod
-
-# === Hotfix (if needed) ===
-
-# 9. Create hotfix branch
-git checkout -b hotfix/critical-fix 25.01.05.0
-git commit -m "fix: correct port binding"
-git checkout main && git merge hotfix/critical-fix
-
-# 10. Create hotfix tag
-git tag -a 25.01.05.1 -m "Hotfix: port binding"
-git push origin 25.01.05.1
 ```
 
 ---
 
-## Anti-Patterns to Avoid
+## Anti-Patterns
 
-### ❌ Long-Lived Environment Branches
-
-**Bad:**
-```
-main
-├── dev (branch)
-├── qa (branch)
-└── prod (branch)
-```
-
-**Why:** Branches diverge, merge conflicts, unclear state
-
-**Instead:** Use `main` + tags
-
-### ❌ Using "latest" in Production
-
-**Bad:**
-```yaml
-execution_environment: "my-ee:latest"
-scm_branch: "main"
-```
-
-**Instead:**
-```yaml
-execution_environment: "my-ee:25.01.05.0"
-scm_branch: "25.01.05.0"
-```
-
-### ❌ Reusing or Moving Tags
-
-**Bad:**
-```bash
-git tag -d 25.01.05.0        # Delete
-git tag 25.01.05.0 <new>     # Recreate
-git push --force             # Force push
-```
-
-**Instead:** Create new PATCH version
-```bash
-git tag 25.01.05.1
-```
-
----
-
-## Git Configuration
-
-### Protected Branches
-
-```yaml
-# GitHub branch protection for main
-required_pull_request_reviews:
-  required_approving_review_count: 1
-required_status_checks:
-  contexts: ["pre-commit", "ansible-lint", "molecule-test"]
-allow_force_pushes: false
-allow_deletions: false
-```
-
-### Protected Tags
-
-```bash
-# GitHub: Settings > Tags > Protected tags
-# Pattern: [0-9][0-9].*
-# Prevents deletion of CalVer tags
-```
-
-### Tag Validation Regex
-
-```bash
-^[0-9]{2}\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01])\.[0-9]+$
-```
+| Anti-Pattern | Instead |
+|--------------|---------|
+| Long-lived branches (dev, qa, prod) | main + tags |
+| `:latest` in production | Specific version tags |
+| Moving/deleting tags | Create new PATCH version |
+| Mismatched code/EE versions | Same tag for both |
+| Unpinned dependencies | Always pin versions |
 
 ---
 
 ## Best Practices
 
-### 1. Keep Feature Branches Short-Lived
-
-- Aim for branches that live <2 days
-- Merge frequently to avoid conflicts
-- Use feature flags for incomplete features
-
-### 2. Write Meaningful Tag Messages
-
-```bash
-# ✅ GOOD
-git tag -a 25.01.05.0 -m "Release January 5, 2025
-
-Features:
-- Monitoring role with Prometheus
-- Database backup automation
-
-Testing: All molecule tests passed
-Rollback: Revert to 25.01.04.0 if issues"
-
-# ❌ BAD
-git tag 25.01.05.0  # No message
-```
-
-### 3. Always Use Full Format
-
-```bash
-# ✅ GOOD
-25.01.05.0
-
-# ❌ BAD
-25.1.5.0     # Missing leading zeros
-25.01.05     # Missing PATCH
-```
-
-### 4. Use Tekton Pipelines
-
-```bash
-# Create release
-tkn pipeline start create-release -p VERSION=25.01.05.0
-
-# Pipeline validates format, gathers commits, creates manifest
-```
-
----
-
-## FAQs
-
-### Q: What about breaking changes?
-
-Document breaking changes prominently in:
-- Git tag message (use ⚠️ WARNING)
-- CHANGELOG
-- Release manifest metadata
-
-```bash
-git tag -a 25.02.01.0 -m "⚠️ BREAKING CHANGES
-- Removed deprecated inventory format
-- Changed role variable names
-See CHANGELOG.md for migration guide"
-```
-
-### Q: Can I skip days?
-
-Yes, version = release date, not sequential days.
-
-```bash
-25.01.05.0  # Jan 5
-25.01.10.0  # Jan 10 (skipped 6-9)
-```
-
-### Q: Multiple releases per day?
-
-Use PATCH:
-```bash
-25.01.05.0  # Morning
-25.01.05.1  # Afternoon hotfix
-25.01.05.2  # Evening fix
-```
-
-### Q: How do I compare versions?
-
-Lexicographic sorting works correctly:
-```bash
-25.01.05.0 < 25.01.05.1 < 25.01.06.0 < 25.02.01.0
-```
+1. **Keep branches short-lived** (<2 days)
+2. **Write meaningful tag messages** with features and rollback info
+3. **Always use full format** (`25.01.05.0` not `25.1.5`)
+4. **Match EE to code version**
+5. **Use digests in production**
+6. **Test EE before promotion**
 
 ---
 
 ## References
 
-- **CalVer Spec**: https://calver.org/
-- **Trunk-Based Development**: https://trunkbaseddevelopment.com/
-- **Git Tagging**: https://git-scm.com/book/en/v2/Git-Basics-Tagging
-- **EE Versioning**: [EE-VERSIONING-STRATEGY.md](./EE-VERSIONING-STRATEGY.md)
+- [CalVer](https://calver.org/)
+- [Trunk-Based Development](https://trunkbaseddevelopment.com/)
+- [Git Tagging](https://git-scm.com/book/en/v2/Git-Basics-Tagging)
