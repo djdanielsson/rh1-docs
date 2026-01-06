@@ -141,6 +141,9 @@ $RECYCLE.BIN/
 local-*
 override-*
 
+# Local utility scripts (not committed)
+repo-tools.sh
+
 # Node.js (if any JS tooling)
 node_modules/
 npm-debug.log*

@@ -5,95 +5,92 @@ This is the project workspace containing all repositories and planning documenta
 ## Quick Links
 
 ### 🚀 Get Started
-- **[Getting Started](./GETTING-STARTED.md)** - Quick start guide
+- **[Getting Started](./docs/GETTING-STARTED.md)** - Quick start guide
 - **[Documentation Index](./docs/INDEX.md)** - Complete documentation index
-- **[Development Guide](./DEVELOPMENT.md)** - Development workflow
+- **[Development Guide](./docs/DEVELOPMENT.md)** - Development workflow
 
 ### 📖 Core Documents
 - **[Constitution](./.specify/memory/constitution.md)** - Project principles (5 articles)
 - **[Specification](./.specify/memory/specification.md)** - Detailed requirements
-- **[Platform Summary](./docs/PLATFORM-GENERATION-SUMMARY.md)** - What's been built
+- **[Git Workflow](./docs/GIT-WORKFLOW.md)** - Branching, versioning, and promotion
 
 ### 🛠️ Developer Resources
 - **[Ansible Best Practices](./docs/ANSIBLE-BEST-PRACTICES.md)** ⭐ Essential reading
-- **[Pre-commit Setup](./docs/PRE-COMMIT-SETUP.md)** - Quality tools
+- **[Pre-commit Guide](./docs/PRE-COMMIT-GUIDE.md)** - Quality tools
 - **[Testing Guide](./docs/TESTING-GUIDE.md)** - Testing strategies
-- **[Examples](./docs/EXAMPLES-SUMMARY.md)** - Example content
+- **[Dev Containers Guide](./docs/DEV-CONTAINERS-GUIDE.md)** - Development environments
 
 ### 📚 Reference
 - **[CI/CD Guide](./docs/CICD-GUIDE.md)** - Automation workflows
 - **[Naming Conventions](./docs/NAMING-CONVENTIONS.md)** - Naming standards
 - **[Code Style](./docs/CODE-STYLE-GUIDE.md)** - Style guide
-- **[Standards](./docs/STANDARDS-SUMMARY.md)** - All standards
+- **[CI/CD Guide](./docs/CICD-GUIDE.md)** - GitHub Actions and Tekton pipelines
 
 ## Repository Structure
 
 ```
 rh1_ansible_code_lifecycle/              # Project workspace (NOT a git repo)
-├── README.md                            # This file
-├── GETTING-STARTED.md                   # Quick start guide
-├── DEVELOPMENT.md                       # Development guide
-├── .specify/memory/                     # Project governance
-│   ├── constitution.md                  # Immutable principles
-│   └── specification.md                 # Detailed requirements
+├── README.md                            # This file - platform overview
+├── docs/                                # All documentation
+│   ├── INDEX.md                         # Documentation index
+│   ├── GETTING-STARTED.md               # Quick start guide
+│   ├── DEVELOPMENT.md                   # Development workflow
+│   ├── diagrams/                        # Architecture and workflow diagrams
+│   ├── GIT-WORKFLOW.md                   # Branching, versioning, promotion
+│   ├── CICD-GUIDE.md                    # CI/CD workflows
+│   └── ...                              # 15+ guides
 ├── specs/                               # Project specifications
 │   └── 001-cloud-native-ansible-lifecycle/
-│       ├── README.md                    # Feature overview
-│       └── quickstart.md                # Operational guide
+├── tests/                               # Platform-wide tests
+│
 ├── cluster-config/                      # Git Repo 1: Platform GitOps
-│   ├── argocd/                          # ArgoCD applications
-│   ├── operators/                       # Operator subscriptions
-│   ├── aap-instances/                   # AAP CRs
-│   ├── tekton/                          # Tekton pipelines
-│   └── README.md
 ├── aap-config-as-code/                  # Git Repo 2: AAP Configuration
-│   ├── playbook.yml                     # Main CaC playbook
-│   ├── inventory.yml                    # AAP environments
-│   ├── group_vars/                      # Config by environment
-│   └── README.md
 ├── automation-collection-example/       # Git Repo 3: Ansible Collection
-│   ├── galaxy.yml                       # Collection metadata
-│   ├── roles/                           # Ansible roles
-│   ├── plugins/                         # Custom plugins
-│   └── README.md
-├── automation-ee-example/               # Git Repo 4: Execution Environment (TODO)
-└── automation-release-manifest/         # Git Repo 5: Release manifests (TODO)
+├── automation-ee-example/               # Git Repo 4: Execution Environment
+└── automation-release-manifest/         # Git Repo 5: Release Management
 ```
 
 ## The Five Git Repositories
 
-### 1. cluster-config
+### 1. cluster-config (Platform GitOps)
 - **Repository**: https://github.com/djdanielsson/rh1-cluster-config.git
-- **Purpose**: Platform GitOps - Deploy AAP + Tekton on OpenShift
-- **Managed by**: ArgoCD
-- **Pattern**: Application-of-Applications
-- **Status**: ✅ Complete
+- **Purpose**: Deploy and manage AAP + Tekton on OpenShift via ArgoCD
+- **Contents**: Kubernetes manifests, operator subscriptions, AAP CRs for 3 environments
+- **Pattern**: ApplicationSet with auto-discovery
+- **Managed by**: ArgoCD (OpenShift GitOps)
+- **[View README](./cluster-config/README.md)**
 
-### 2. aap-config-as-code
+### 2. aap-config-as-code (Application GitOps)
 - **Repository**: https://github.com/djdanielsson/rh1-aap-config-as-code.git
-- **Purpose**: Application GitOps - Configure AAP via API
-- **Managed by**: Tekton pipelines
+- **Purpose**: Configure AAP via API using `infra.aap_configuration` collection
+- **Contents**: Playbooks, inventories, group_vars for dev/qa/prod
 - **Pattern**: dispatch role with wildcard variables
-- **Status**: ✅ Complete
+- **Managed by**: Tekton pipelines
+- **[View README](./aap-config-as-code/README.md)**
 
-### 3. automation-collection-example
+### 3. automation-collection-example (Ansible Collection)
 - **Repository**: https://github.com/djdanielsson/rh1-custom-collection.git
-- **Purpose**: Custom Ansible collection (roles, modules, plugins)
+- **Purpose**: Example custom Ansible collection with roles, modules, plugins
+- **Contents**: 4 roles, 2 modules, 4 filters, 2 lookups, Molecule tests
 - **Created with**: ansible-creator
-- **Testing**: Molecule scenarios
-- **Status**: ✅ Complete
+- **Testing**: Molecule scenarios, ansible-test sanity
+- **[View README](./automation-collection-example/README.md)**
 
-### 4. automation-ee-example
+### 4. automation-ee-example (Execution Environment)
 - **Repository**: https://github.com/djdanielsson/rh1-custom-ee.git
-- **Purpose**: Custom Execution Environment
-- **Created with**: ansible-builder
-- **Status**: ⏳ TODO
+- **Purpose**: Custom Execution Environment container image
+- **Contents**: execution-environment.yml, requirements.yml/txt, bindep.txt
+- **Built with**: ansible-builder
+- **Base**: registry.redhat.io/ansible-automation-platform-26/ee-minimal-rhel9
+- **[View README](./automation-ee-example/README.md)**
 
-### 5. automation-release-manifest
+### 5. automation-release-manifest (Release Management)
 - **Repository**: https://github.com/djdanielsson/rh1-release-manifest.git
-- **Purpose**: Version-lock all components for atomic promotion
-- **Format**: YAML with Git SHAs and image tags
-- **Status**: ⏳ TODO
+- **Purpose**: Version-lock all components for atomic promotion between environments
+- **Contents**: Release manifests (YAML), Tekton pipelines, JSON schema
+- **Versioning**: CalVer YY.MM.DD.PATCH
+- **Pipelines**: create-release, promote, rollback (all Tekton)
+- **[View README](./automation-release-manifest/README.md)**
 
 ## Constitution Compliance
 
@@ -208,14 +205,14 @@ git push origin v1.0.0
 The platform is **production-ready** even without OpenShift or AAP running:
 
 ✅ **Develop Content** - 4 example roles, custom modules, filters, lookups
-✅ **Enforce Quality** - 85+ pre-commit hooks, 25 CI/CD workflows
+✅ **Enforce Quality** - Pre-commit hooks, CI/CD workflows
 ✅ **Test Everything** - Multi-level testing (unit, integration, Molecule, E2E)
 ✅ **Follow Standards** - Red Hat CoP aligned, ansible-lint compliant
-✅ **Ensure Security** - 4 layers of secret detection, vulnerability scanning
+✅ **Ensure Security** - Secret detection, vulnerability scanning
 ✅ **Validate Configs** - Test playbooks for all repositories
-✅ **Learn Best Practices** - 15,000+ lines of documentation
+✅ **Learn Best Practices** - Comprehensive documentation
 
-See **[Platform Generation Summary](./docs/PLATFORM-GENERATION-SUMMARY.md)** for complete details.
+See **[Documentation Index](./docs/INDEX.md)** for complete documentation.
 
 ## 📊 Platform Statistics
 

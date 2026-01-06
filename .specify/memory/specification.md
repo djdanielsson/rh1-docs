@@ -4,13 +4,17 @@
 
 Build a production-grade, end-to-end CI/CD and GitOps framework for Ansible automation on OpenShift, managing multi-tenant AAP deployments with atomic promotion capabilities.
 
+---
+
 ## Goals
 
 1. **GitOps Everything**: All configuration in Git, no manual changes
-2. **Atomic Promotion**: EE + CaC + Code promoted together
+2. **Atomic Promotion**: EE + CaC + Code promoted together via release manifests
 3. **Fast Feedback**: <1min inner loop, <5min promotion
-4. **Zero Secrets in Git**: All secrets in OCP, referenced by name
+4. **Zero Secrets in Git**: All secrets in OCP/Vault, referenced by name
 5. **Production Quality**: 100% idempotent, tested, documented
+
+---
 
 ## System Architecture
 
@@ -18,11 +22,11 @@ Build a production-grade, end-to-end CI/CD and GitOps framework for Ansible auto
 
 | Component | Purpose | Technology |
 |-----------|---------|------------|
-| cluster-config | Platform GitOps | ArgoCD |
+| cluster-config | Platform GitOps | ArgoCD (ApplicationSet) |
 | aap-config-as-code | App GitOps | Tekton + infra.aap_configuration |
 | automation-collection-example | Custom content | Ansible Collection |
 | automation-ee-example | Runtime environment | ansible-builder |
-| automation-release-manifest | Version locking | YAML manifests |
+| automation-release-manifest | Version locking | YAML manifests + Tekton pipelines |
 
 ### Dual GitOps Loops
 
@@ -36,67 +40,84 @@ Build a production-grade, end-to-end CI/CD and GitOps framework for Ansible auto
 - Triggered: Git commit → Webhook → Tekton
 - Scope: AAP API calls
 
+---
+
 ## Repository Specifications
 
 ### 1. cluster-config
 - **URL**: https://github.com/djdanielsson/rh1-cluster-config.git
 - **Purpose**: Deploy AAP + Tekton on OpenShift
-- **Pattern**: ArgoCD Application-of-Applications
-- **Key Files**:
-  - `argocd/root-app.yaml` - Bootstrap everything
-  - `operators/aap-operator.yaml` - Namespace-scoped AAP operators
-  - `aap-instances/*.yaml` - AAP CRs for dev/qa/prod
-  - `tekton/pipelines/*.yaml` - CI/CD pipelines
+- **Pattern**: ArgoCD ApplicationSet with auto-discovery
+- **Key Directories**:
+  - `bootstrap-openshift-gitops/` - GitOps operator + ApplicationSet
+  - `applications/aap-dev/`, `aap-qa/`, `aap-prod/` - AAP environments
+  - `applications/openshift-pipelines/` - Tekton operator
 
 ### 2. aap-config-as-code
 - **URL**: https://github.com/djdanielsson/rh1-aap-config-as-code.git
 - **Purpose**: Configure AAP via API
 - **Pattern**: dispatch role with wildcard variables
 - **Key Files**:
-  - `playbook.yml` - Uses infra.aap_configuration.dispatch
-  - `group_vars/all/*` - Common config
-  - `group_vars/aap_dev/*` - Dev-specific config
+  - `playbooks/playbook.yml` - Uses infra.aap_configuration.dispatch
+  - `inventory/group_vars/all/*` - Common config
+  - `inventory/group_vars/aap_dev/*` - Dev-specific config
 
 ### 3. automation-collection-example
 - **URL**: https://github.com/djdanielsson/rh1-custom-collection.git
 - **Purpose**: Custom Ansible content
 - **Pattern**: ansible-creator collection
-- **Key Features**:
-  - Roles with Molecule tests
-  - Custom modules, filters, plugins
-  - CI/CD integration
+- **Contents**:
+  - 4 roles with Molecule tests
+  - 2 custom modules
+  - 4 filter plugins
+  - 2 lookup plugins
 
 ### 4. automation-ee-example
 - **URL**: https://github.com/djdanielsson/rh1-custom-ee.git
 - **Purpose**: Custom execution environment
 - **Pattern**: ansible-builder
-- **Contents**: Base image + collections + dependencies
+- **Base Image**: registry.redhat.io/ansible-automation-platform-26/ee-minimal-rhel9
 
 ### 5. automation-release-manifest
 - **URL**: https://github.com/djdanielsson/rh1-release-manifest.git
 - **Purpose**: Version-lock all components
-- **Pattern**: YAML manifests with Git SHAs
-- **Format**:
-  ```yaml
-  version: "1.0.0"
-  components:
-    aap_configuration: "abc123..."
-    execution_environment: "def456..."
-    collections: "ghi789..."
-  ```
+- **Pattern**: YAML manifests with Tekton pipelines
+- **Tekton Pipelines**:
+  - `create-release` - Create new release manifest
+  - `promote` - Promote between environments
+  - `rollback` - Rollback to previous version
+
+---
+
+## Versioning
+
+### Standard: CalVer YY.MM.DD.PATCH
+
+```
+25.01.05.0  # January 5, 2025, initial release
+25.01.05.1  # January 5, 2025, hotfix
+25.01.06.0  # January 6, 2025, new release
+```
+
+Applied consistently across:
+- Git tags
+- Collection versions (galaxy.yml)
+- EE image tags
+- Release manifest versions
+
+---
 
 ## Workflows
 
 ### 1. Platform Bootstrap
 ```
 1. Install GitOps operator
-2. oc apply -f argocd/root-app.yaml
+2. oc apply -f bootstrap-openshift-gitops/cluster-applicationset.yml
 3. ArgoCD creates everything automatically:
-   - Namespaces
-   - AAP operators
+   - Namespaces (aap-dev, aap-qa, aap-prod)
+   - AAP operators (namespace-scoped)
    - AAP instances
-   - Tekton
-   - RBAC
+   - Tekton pipelines
 ```
 
 ### 2. Developer Inner Loop
@@ -120,16 +141,23 @@ Build a production-grade, end-to-end CI/CD and GitOps framework for Ansible auto
 
 ### 4. Atomic Promotion
 ```
-1. Create release manifest with locked versions
-2. git tag v1.0.0
-3. Promotion pipeline:
-   - Reads manifest
-   - Builds EE with exact collections
-   - Deploys to QA
-   - Runs validation
-   - Waits for approval
-   - Deploys to Prod
+1. Create release:
+   tkn pipeline start create-release -p VERSION=25.01.05.0
+2. Promote to QA:
+   tkn pipeline start promote -p VERSION=25.01.05.0 -p FROM=dev -p TO=qa
+3. After QA validation, promote to Prod:
+   tkn pipeline start promote -p VERSION=25.01.05.0 -p FROM=qa -p TO=prod
 ```
+
+### 5. Rollback
+```
+1. Issue detected in production
+2. Rollback to previous version:
+   tkn pipeline start rollback -p TARGET_VERSION=25.01.04.0 -p ENVIRONMENT=prod
+3. All components restored atomically
+```
+
+---
 
 ## Success Criteria
 
@@ -139,7 +167,9 @@ Build a production-grade, end-to-end CI/CD and GitOps framework for Ansible auto
 - ✅ Zero secrets in any Git repository
 - ✅ 100% idempotent automation
 - ✅ Complete audit trail via Git log
-- ✅ Atomic rollback capability
+- ✅ Atomic rollback capability via Tekton pipeline
+
+---
 
 ## Non-Functional Requirements
 
@@ -160,13 +190,12 @@ Build a production-grade, end-to-end CI/CD and GitOps framework for Ansible auto
 - Audit trail for all changes
 
 ### Maintainability
-- Comprehensive documentation
+- Comprehensive documentation in `docs/`
 - Self-documenting code
 - Consistent patterns across all repos
 
 ---
 
-**Version**: 1.0
-**Status**: Implementation Phase
-**Last Updated**: 2025-10-29
-
+**Version**: 1.1  
+**Status**: Implementation Phase  
+**Last Updated**: 2025-01-05

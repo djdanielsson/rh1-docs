@@ -333,8 +333,8 @@ mmdc -i docs/diagrams/PLATFORM-ARCHITECTURE.md -o /tmp/test.png
 ## 🔗 Related Documentation
 
 ### Getting Started
-- [Getting Started Guide](../../GETTING-STARTED.md) - Quick start
-- [Development Guide](../../DEVELOPMENT.md) - Development workflow
+- [Getting Started Guide](../GETTING-STARTED.md) - Quick start
+- [Development Guide](../DEVELOPMENT.md) - Development workflow
 
 ### Architecture
 - [Constitution](../../.specify/memory/constitution.md) - Core principles

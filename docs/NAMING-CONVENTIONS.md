@@ -710,7 +710,7 @@ Rollback Plan: Revert to prod-v1.0.0"
 - ❌ **NEVER** force-push tags: `git push --force origin <tag>`
 - ❌ **NEVER** reuse tag names on different commits
 
-**See**: [BRANCHING-STRATEGY.md](./BRANCHING-STRATEGY.md) for complete workflow
+**See**: [GIT-WORKFLOW.md](./GIT-WORKFLOW.md) for complete workflow
 
 ---
 
