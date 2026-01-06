@@ -39,7 +39,8 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 │   ├── CICD-GUIDE.md                    # CI/CD workflows
 │   └── ...                              # 15+ guides
 ├── .specify/memory/                     # Project specifications
-│   └── 001-cloud-native-ansible-lifecycle/
+│   ├── constitution.md                  # Project principles
+│   └── specification.md                 # Technical requirements
 ├── tests/                               # Platform-wide tests
 │
 ├── cluster-config/                      # Git Repo 1: Platform GitOps

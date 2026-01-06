@@ -346,7 +346,7 @@ controller_job_templates_dev_web:
 ```bash
 # Create release manifest
 cd automation-release-manifest
-cat > releases/release-26.01.06.0.yml << EOF
+cat > releases/release-26.01.06.0.yaml << EOF
 version: "26.01.06.0"
 components:
   aap_configuration: "$(git -C ../aap-config-as-code rev-parse HEAD)"
@@ -355,7 +355,7 @@ components:
 EOF
 
 # Tag and promote
-git add releases/release-26.01.06.0.yml
+git add releases/release-26.01.06.0.yaml
 git commit -m "Release 26.01.06.0 - Web app deployment"
 git tag 26.01.06.0
 git push origin 26.01.06.0
