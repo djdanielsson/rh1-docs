@@ -150,17 +150,17 @@ flowchart TD
     MOLECULE --> MOLECULE_UBUNTU
 
     %% Styling
-    classDef manifest fill:#e1f5fe,stroke:#01579b,stroke-width:3px
-    classDef component fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef repo fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
-    classDef config fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    classDef code fill:#fce4ec,stroke:#c2185b,stroke-width:2px
-    classDef role fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px
-    classDef file fill:#f5f5f5,stroke:#424242,stroke-width:1px
-    classDef deps fill:#e0f2f1,stroke:#00695c,stroke-width:2px
-    classDef image fill:#fff8e1,stroke:#f57f17,stroke-width:2px
-    classDef test fill:#e8eaf6,stroke:#3f51b5,stroke-width:1px
-    classDef ext fill:#fafafa,stroke:#616161,stroke-width:1px,stroke-dasharray: 5 5
+    classDef manifest fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#000000
+    classDef component fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000000
+    classDef repo fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px,color:#000000
+    classDef config fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,color:#000000
+    classDef code fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000000
+    classDef role fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px,color:#000000
+    classDef file fill:#f5f5f5,stroke:#424242,stroke-width:1px,color:#000000
+    classDef deps fill:#e0f2f1,stroke:#00695c,stroke-width:2px,color:#000000
+    classDef image fill:#fff8e1,stroke:#f57f17,stroke-width:2px,color:#000000
+    classDef test fill:#e8eaf6,stroke:#3f51b5,stroke-width:1px,color:#000000
+    classDef ext fill:#fafafa,stroke:#616161,stroke-width:1px,stroke-dasharray: 5 5,color:#000000
 ```
 
 ---
