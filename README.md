@@ -5,7 +5,7 @@ This is the project workspace containing all repositories and planning documenta
 ## Quick Links
 
 ### 🚀 Get Started
-- **[Platform Guide](./docs/platform-guide.md)** - Complete platform overview and development workflow
+- **[Platform Guide](./docs/PLATFORM-GUIDE.md)** - Complete platform overview and development workflow
 
 ### 📖 Core Documents
 - **[Constitution](./.specify/memory/constitution.md)** - Project principles (5 articles)
@@ -29,7 +29,7 @@ This is the project workspace containing all repositories and planning documenta
 rh1_ansible_code_lifecycle/              # Project workspace repo (docs + component repos)
 ├── README.md                            # This file - platform overview
 ├── docs/                                # All documentation
-│   ├── platform-guide.md                # Platform guide and documentation index
+│   ├── PLATFORM-GUIDE.md                # Platform guide and documentation index
 │   ├── diagrams/                        # Architecture and workflow diagrams
 │   ├── GIT-WORKFLOW.md                  # Branching, versioning, promotion
 │   ├── CICD-GUIDE.md                    # CI/CD workflows
@@ -208,7 +208,7 @@ The platform is **production-ready** even without OpenShift or AAP running:
 ✅ **Validate Configs** - Test playbooks for all repositories
 ✅ **Learn Best Practices** - Comprehensive documentation
 
-See **[Platform Guide](./docs/platform-guide.md)** for complete documentation.
+See **[Platform Guide](./docs/PLATFORM-GUIDE.md)** for complete documentation.
 
 ## 📊 Platform Statistics
 
