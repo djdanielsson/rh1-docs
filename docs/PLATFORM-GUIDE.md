@@ -16,17 +16,19 @@ This platform implements a complete automation lifecycle using GitOps principles
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
-│   │  COLLECTION  │───▶│  EXECUTION   │───▶│    AAP       │                  │
-│   │   (Roles)    │    │ ENVIRONMENT  │    │  CONFIG      │                  │
+│   │  COLLECTION  │───▶│   PLAYBOOK   │───▶│    AAP       │                  │
+│   │   (Roles)    │    │              │    │   CONFIG     │                  │
 │   └──────────────┘    └──────────────┘    └──────────────┘                  │
+│          │                   |                   |                          │
 │          │                   │                   │                          │
 │          └───────────────────┴───────────────────┘                          │
 │                              │                                              │
+│                              │                                              │
 │                              ▼                                              │
-│                    ┌──────────────────┐                                     │
-│                    │ RELEASE MANIFEST │ ◀── Version-locks all components    │
-│                    │   (26.01.06.0)   │                                     │
-│                    └──────────────────┘                                     │
+│                    ┌──────────────────┐    ┌──────────────┐                 │
+│                    │ RELEASE MANIFEST │───▶│ EXECUTION    │                 │
+│                    │   (26.01.06.0)   │    │ ENVIRONMENT  │                 │
+│                    └──────────────────┘    └──────────────┘                 │
 │                              │                                              │
 │          ┌───────────────────┼───────────────────┐                          │
 │          ▼                   ▼                   ▼                          │
@@ -38,12 +40,14 @@ This platform implements a complete automation lifecycle using GitOps principles
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+**Complete dependency tree**: [Dependency Tree](./diagrams/DEPENDENCY-TREE.md)
+
 ### Core Concepts
 
 | Concept | Description |
 |---------|-------------|
 | **Dual GitOps Loops** | ArgoCD manages platform resources; Tekton manages application configuration |
-| **Atomic Promotion** | All components (EE + CaC + Collections) promote together as one versioned unit |
+| **Atomic Promotion** | All components (EE + CaC + Playbooks + Collections) promote together as one versioned unit |
 | **Release Manifest** | YAML file that version-locks all component Git SHAs and image digests |
 | **CalVer Versioning** | Releases use `YY.MM.DD.PATCH` format (e.g., `26.01.06.0`) |
 
@@ -67,6 +71,8 @@ This platform implements a complete automation lifecycle using GitOps principles
 This section walks through the complete lifecycle of creating new automation and moving it through all environments.
 
 ### Step 1: Develop Your Role
+
+Create or modify roles in the `automation-collection-example` repository.
 
 Create or modify roles in the `automation-collection-example` repository.
 
@@ -163,7 +169,132 @@ molecule destroy   # Clean up
 
 ---
 
-### Step 3: Validate Quality
+### Step 3: Create or Update Playbook
+
+Create or modify playbooks in the `automation-playbooks` repository to orchestrate your role.
+
+```bash
+# Navigate to playbooks repository
+cd automation-playbooks
+
+# Create a new playbook
+vi playbooks/deploy-myapp.yml
+```
+
+**Example playbook that calls your role:**
+
+```yaml
+---
+# deploy-myapp.yml
+- name: Deploy My Application
+  hosts: webservers
+  gather_facts: true
+
+  pre_tasks:
+    - name: Validate required variables
+      ansible.builtin.assert:
+        that:
+          - app_name is defined
+        fail_msg: "Required variable app_name must be defined"
+
+  roles:
+    - role: myorg.custom_collection.my_new_role
+      vars:
+        app_name: "{{ app_name }}"
+        my_new_role_packages: "{{ app_packages | default(['httpd']) }}"
+
+  post_tasks:
+    - name: Verify deployment
+      ansible.builtin.uri:
+        url: "http://{{ ansible_host }}:8080"
+        status_code: 200
+```
+
+📘 **More details**: [automation-playbooks README](../automation-playbooks/README.md)
+
+---
+
+### Step 4: Configure AAP Job Template
+
+Add or update job templates in the `aap-config-as-code` repository to define how your playbook runs.
+
+```bash
+# Navigate to AAP config
+cd aap-config-as-code
+
+# Edit job templates
+vi inventory/group_vars/aap_dev/job_templates.yml
+```
+
+**Add your job template:**
+
+```yaml
+controller_job_templates_dev:
+  - name: "Deploy My App (Dev)"
+    description: "Deploy my application using my_new_role"
+    job_type: run
+    organization: Default
+    inventory: "Dev Servers"
+    project: "Automation Playbooks"  # References playbook repo
+    playbook: "playbooks/deploy-myapp.yml"
+    execution_environment: "Custom EE (Dev)"
+    credentials:
+      - "Dev SSH Key"
+    ask_variables_on_launch: true
+    extra_vars:
+      app_name: "myapp"
+```
+
+**Ensure project references playbooks:**
+
+```yaml
+# inventory/group_vars/aap_dev/projects.yml
+controller_projects:
+  - name: "Automation Playbooks"
+    scm_type: git
+    scm_url: https://github.com/djdanielsson/rh1-automation-playbooks.git
+    scm_branch: main
+    credential: "GitHub Token"
+```
+
+📘 **More details**: [aap-config-as-code README](../aap-config-as-code/README.md)
+
+---
+
+### Step 5: Update Execution Environment (if needed)
+
+If your role requires new dependencies, update the `automation-ee-example` repository.
+
+```bash
+# Check if new dependencies are needed
+cd automation-ee-example
+
+# Update Python packages
+vi requirements.txt
+# Add: my-new-package>=1.0.0
+
+# Update Ansible collections
+vi requirements.yml
+# Add your collection dependency
+
+# Update system packages if needed
+vi bindep.txt
+# Add: my-system-package
+```
+
+Push changes to trigger EE rebuild:
+
+```bash
+git commit -am "Add dependencies for my_new_role"
+git push origin main
+# Tekton automatically builds new EE image
+```
+
+📘 **More details**: [EE Versioning Strategy](./EE-VERSIONING-STRATEGY.md)
+
+---
+
+### Step 6: Validate Quality
 
 Run linting and quality checks before committing.
 
@@ -184,7 +315,7 @@ pre-commit run --all-files
 
 ---
 
-### Step 4: Create Pull Request
+### Step 7: Create Pull Request
 
 Push your changes and create a PR. CI runs automatically.
 
@@ -212,7 +343,7 @@ gh pr create --title "Add my_new_role" --body "Adds deployment automation for XY
 
 ---
 
-### Step 5: Merge to Main → Auto-Deploy to Dev
+### Step 8: Merge to Main → Auto-Deploy to Dev
 
 After PR approval and merge, changes automatically deploy to the Dev environment.
 
@@ -229,69 +360,12 @@ The inner loop is fast—typically under 1 minute from merge to deployment.
 
 ---
 
-### Step 6: Configure AAP Job Templates
-
-If your role needs a new Job Template in AAP, add it to `aap-config-as-code`.
-
-```yaml
-# aap-config-as-code/inventory/group_vars/aap_dev/job_templates.yml
-controller_job_templates:
-  - name: "Deploy My Application"
-    description: "Deploy application using my_new_role"
-    job_type: run
-    organization: Default
-    inventory: "Dev Servers"
-    project: "Custom Collection"
-    playbook: "playbooks/deploy_app.yml"
-    execution_environment: "Custom EE (Dev)"
-    credentials:
-      - "Dev SSH Key"
-```
-
-Push to trigger the CaC pipeline:
-
-```bash
-cd aap-config-as-code
-git commit -am "Add job template for my_new_role"
-git push origin main
-# Webhook triggers CaC pipeline → AAP Dev updated
-```
-
-📘 **More details**: [aap-config-as-code README](../aap-config-as-code/README.md)
 
 ---
 
-### Step 7: Update Execution Environment (if needed)
-
-If your role requires new Python packages or collections, update the EE definition.
-
-```yaml
-# automation-ee-example/requirements.yml (Ansible collections)
-collections:
-  - name: community.general
-  - name: myorg.custom_collection
-```
-
-```txt
-# automation-ee-example/requirements.txt (Python packages)
-jmespath>=1.0.0
-netaddr>=0.8.0
-```
-
-Push to trigger EE rebuild:
-
-```bash
-cd automation-ee-example
-git commit -am "Add dependencies for my_new_role"
-git push origin main
-# Tekton builds new EE image
-```
-
-📘 **More details**: [EE Versioning Strategy](./EE-VERSIONING-STRATEGY.md) | [automation-ee-example README](../automation-ee-example/README.md)
 
 ---
 
-### Step 8: Create Release Manifest
 
 When ready to promote to QA, create a release manifest that locks all component versions.
 
