@@ -333,8 +333,7 @@ mmdc -i docs/diagrams/PLATFORM-ARCHITECTURE.md -o /tmp/test.png
 ## 🔗 Related Documentation
 
 ### Getting Started
-- [Getting Started Guide](../GETTING-STARTED.md) - Quick start
-- [Development Guide](../DEVELOPMENT.md) - Development workflow
+- [Platform Guide](../platform-guide.md) - Complete platform overview and development workflow
 
 ### Architecture
 - [Constitution](../../.specify/memory/constitution.md) - Core principles
@@ -436,5 +435,5 @@ All diagrams are validated for:
 | 🔄 GitOps Explanation | [GitOps Loops](./GITOPS-LOOPS.md) |
 | 📦 Release Process | [Promotion Flow](./PROMOTION-FLOW.md) |
 | 📁 Code Organization | [Repository Structure](./REPOSITORY-STRUCTURE.md) |
-| 📚 Full Documentation | [Documentation Index](../INDEX.md) |
+| 📚 Full Documentation | [Platform Guide](../platform-guide.md) |
 | 🏠 Project Home | [Main README](../../README.md) |

@@ -5,9 +5,7 @@ This is the project workspace containing all repositories and planning documenta
 ## Quick Links
 
 ### 🚀 Get Started
-- **[Getting Started](./docs/GETTING-STARTED.md)** - Quick start guide
-- **[Documentation Index](./docs/INDEX.md)** - Complete documentation index
-- **[Development Guide](./docs/DEVELOPMENT.md)** - Development workflow
+- **[Platform Guide](./docs/platform-guide.md)** - Complete platform overview and development workflow
 
 ### 📖 Core Documents
 - **[Constitution](./.specify/memory/constitution.md)** - Project principles (5 articles)
@@ -31,13 +29,11 @@ This is the project workspace containing all repositories and planning documenta
 rh1_ansible_code_lifecycle/              # Project workspace repo (docs + component repos)
 ├── README.md                            # This file - platform overview
 ├── docs/                                # All documentation
-│   ├── INDEX.md                         # Documentation index
-│   ├── GETTING-STARTED.md               # Quick start guide
-│   ├── DEVELOPMENT.md                   # Development workflow
+│   ├── platform-guide.md                # Platform guide and documentation index
 │   ├── diagrams/                        # Architecture and workflow diagrams
-│   ├── GIT-WORKFLOW.md                   # Branching, versioning, promotion
+│   ├── GIT-WORKFLOW.md                  # Branching, versioning, promotion
 │   ├── CICD-GUIDE.md                    # CI/CD workflows
-│   └── ...                              # 15+ guides
+│   └── ...                              # 12+ guides
 ├── .specify/memory/                     # Project specifications
 │   ├── constitution.md                  # Project principles
 │   └── specification.md                 # Technical requirements
@@ -104,10 +100,10 @@ All repositories follow the five articles:
 
 ## Getting Started
 
-1. **Read the Constitution**: `./.specify/memory/constitution.md`
-2. **Bootstrap Platform**: Deploy ArgoCD and apply root-app.yaml
-3. **Configure AAP**: Push changes to aap-config-as-code
-4. **Develop Content**: Add roles to automation-collection-example
+1. **Read the Platform Guide**: `./docs/INDEX.md`
+2. **Understand the Principles**: `./.specify/memory/constitution.md`
+3. **Develop Content**: Add roles to automation-collection-example
+4. **Configure AAP**: Push changes to aap-config-as-code
 5. **Promote**: Create release manifest and promote to QA/Prod
 
 ## Development Workflow
@@ -212,11 +208,11 @@ The platform is **production-ready** even without OpenShift or AAP running:
 ✅ **Validate Configs** - Test playbooks for all repositories
 ✅ **Learn Best Practices** - Comprehensive documentation
 
-See **[Documentation Index](./docs/INDEX.md)** for complete documentation.
+See **[Platform Guide](./docs/platform-guide.md)** for complete documentation.
 
 ## 📊 Platform Statistics
 
-- **Documentation**: 11 comprehensive guides (~15,000 lines)
+- **Documentation**: 13 comprehensive guides + 6 architecture diagrams
 - **Pre-commit Hooks**: 85 hooks across 5 repositories
 - **CI/CD Workflows**: 25 GitHub Actions workflows
 - **Test Coverage**: Unit, integration, Molecule, validation
