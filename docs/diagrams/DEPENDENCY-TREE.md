@@ -13,15 +13,17 @@ This diagram shows the complete dependency tree that gets version-locked in each
 ## Dependency Tree Diagram
 
 ```mermaid
-flowchart TD
+graph TD
     %% Top Level: Release Manifest
     RM[Release Manifest<br/>26.01.06.0]:::manifest
 
-    %% Main Components
-    AAP[AAP Configuration<br/>Git SHA]:::component
-    PLAY[Playbooks<br/>Git SHA]:::component
-    COLL[Collections<br/>Git SHA]:::component
-    EE[Execution Environment<br/>Image Digest]:::component
+    %% Main Components - arrange horizontally
+    subgraph MAIN[" "]
+        AAP[AAP Configuration<br/>Git SHA]:::component
+        PLAY[Playbooks<br/>Git SHA]:::component
+        COLL[Collections<br/>Git SHA]:::component
+        EE[Execution Environment<br/>Image Digest]:::component
+    end
 
     %% Connect main components to release manifest
     RM --> AAP
@@ -30,46 +32,50 @@ flowchart TD
     RM --> EE
 
     %% AAP Configuration subtree
-    AAP_REPO[AAP Config Repository<br/>rh1-aap-config-as-code]:::repo
+    subgraph AAP_SUB["AAP Configuration Details"]
+        AAP_REPO[AAP Config Repository<br/>rh1-aap-config-as-code]:::repo
+        JT[Job Templates<br/>*.yml files]:::config
+        PROJS[Projects<br/>projects.yml]:::config
+        INV[Inventories<br/>inventory_*.yml]:::config
+        CREDS[Credentials<br/>credentials.yml]:::config
+        ORGS[Organizations<br/>organizations.yml]:::config
+        SCHEDS[Schedules<br/>schedules.yml]:::config
+    end
+
     AAP --> AAP_REPO
-
-    JT[Job Templates<br/>*.yml files]:::config
-    INV[Inventories<br/>inventory_*.yml]:::config
-    CREDS[Credentials<br/>credentials.yml]:::config
-    ORGS[Organizations<br/>organizations.yml]:::config
-    PROJS[Projects<br/>projects.yml]:::config
-    SCHEDS[Schedules<br/>schedules.yml]:::config
-
     AAP_REPO --> JT
+    AAP_REPO --> PROJS
     AAP_REPO --> INV
     AAP_REPO --> CREDS
     AAP_REPO --> ORGS
-    AAP_REPO --> PROJS
     AAP_REPO --> SCHEDS
 
-    %% Projects reference playbooks
-    PROJS --> PLAY_REPO
+    %% Projects reference playbooks - clear connection
+    PROJS -.-> PLAY_REPO
 
     %% Playbooks subtree
-    PLAY_REPO[Playbooks Repository<br/>rh1-automation-playbooks]:::repo
-    PLAY --> PLAY_REPO
+    subgraph PLAY_SUB["Playbooks Details"]
+        PLAY_REPO[Playbooks Repository<br/>rh1-automation-playbooks]:::repo
+        PLAYBOOK_FILES[Playbook Files<br/>*.yml files]:::config
+    end
 
-    PLAYBOOK_FILES[Playbook Files<br/>*.yml files]:::config
+    PLAY --> PLAY_REPO
     PLAY_REPO --> PLAYBOOK_FILES
 
-    %% Playbooks call roles from collections
-    PLAYBOOK_FILES --> COLL_REPO
+    %% Playbooks call roles from collections - clear connection
+    PLAYBOOK_FILES -.-> COLL_REPO
 
     %% Collections subtree
-    COLL_REPO[Collection Repository<br/>rh1-custom-collection]:::repo
+    subgraph COLL_SUB["Collections Details"]
+        COLL_REPO[Collection Repository<br/>rh1-custom-collection]:::repo
+        GALAXY[galaxy.yml<br/>Collection Metadata]:::config
+        ROLES[Roles Directory<br/>roles/]:::code
+        PLUGINS[Plugins Directory<br/>plugins/]:::code
+        TESTS[Tests Directory<br/>tests/]:::code
+        DEPS[Dependencies<br/>requirements.yml]:::deps
+    end
+
     COLL --> COLL_REPO
-
-    GALAXY[galaxy.yml<br/>Collection Metadata]:::config
-    ROLES[Roles Directory<br/>roles/]:::code
-    PLUGINS[Plugins Directory<br/>plugins/]:::code
-    TESTS[Tests Directory<br/>tests/]:::code
-    DEPS[Dependencies<br/>requirements.yml]:::deps
-
     COLL_REPO --> GALAXY
     COLL_REPO --> ROLES
     COLL_REPO --> PLUGINS
@@ -77,77 +83,74 @@ flowchart TD
     COLL_REPO --> DEPS
 
     %% Roles breakdown
-    ROLE1[Individual Role<br/>e.g., webserver]:::role
-    TASKS[tasks/main.yml]:::file
-    DEFAULTS[defaults/main.yml]:::file
-    VARS[vars/main.yml]:::file
-    HANDLERS[handlers/main.yml]:::file
-    MOLECULE[Molecule Tests<br/>molecule/]:::test
+    subgraph ROLE_SUB["Role Details"]
+        ROLE1[Individual Role<br/>e.g., webserver]:::role
+        TASKS[tasks/main.yml]:::file
+        DEFAULTS[defaults/main.yml]:::file
+        MOLECULE[Molecule Tests<br/>molecule/]:::test
+    end
 
     ROLES --> ROLE1
     ROLE1 --> TASKS
     ROLE1 --> DEFAULTS
-    ROLE1 --> VARS
-    ROLE1 --> HANDLERS
     ROLE1 --> MOLECULE
 
     %% EE subtree
-    EE_REPO[EE Repository<br/>rh1-custom-ee]:::repo
+    subgraph EE_SUB["Execution Environment Details"]
+        EE_REPO[EE Repository<br/>rh1-custom-ee]:::repo
+        EXEC_ENV[execution-environment.yml]:::config
+        PY_REQS[Python Requirements<br/>requirements.txt]:::deps
+        COLL_REQS[Collection Requirements<br/>requirements.yml]:::deps
+        BINDEP[System Packages<br/>bindep.txt]:::deps
+        BASE_IMG[Base Image<br/>registry.redhat.io/...@sha256]:::image
+    end
+
     EE --> EE_REPO
-
-    EXEC_ENV[execution-environment.yml]:::config
-    PY_REQS[Python Requirements<br/>requirements.txt]:::deps
-    COLL_REQS[Collection Requirements<br/>requirements.yml]:::deps
-    BINDEP[System Packages<br/>bindep.txt]:::deps
-    SCRIPTS[Build Scripts<br/>scripts/]:::code
-    BASE_IMG[Base Image<br/>registry.redhat.io/...@sha256]:::image
-
     EE_REPO --> EXEC_ENV
     EE_REPO --> PY_REQS
     EE_REPO --> COLL_REQS
     EE_REPO --> BINDEP
-    EE_REPO --> SCRIPTS
     EE --> BASE_IMG
 
-    %% External Dependencies
-    EXT_COLL1[ansible.posix<br/>>=1.5.0]:::ext
-    EXT_COLL2[community.postgresql<br/>>=3.0.0]:::ext
-    EXT_COLL3[containers.podman<br/>>=1.10.0]:::ext
+    %% External Dependencies - group them
+    subgraph EXT_SUB["External Dependencies"]
+        EXT_COLL1[ansible.posix<br/>>=1.5.0]:::ext
+        EXT_COLL2[community.postgresql<br/>>=3.0.0]:::ext
+        EXT_COLL3[containers.podman<br/>>=1.10.0]:::ext
+        PY1[jmespath<br/>>=1.0.0]:::ext
+        PY2[netaddr<br/>>=0.8.0]:::ext
+        PY3[PyYAML<br/>>=6.0]:::ext
+        SYS1[gcc]:::ext
+        SYS2[python3.11-devel]:::ext
+        SYS3[pkg-config]:::ext
+    end
 
     DEPS --> EXT_COLL1
     DEPS --> EXT_COLL2
     DEPS --> EXT_COLL3
-
     COLL_REQS --> EXT_COLL1
     COLL_REQS --> EXT_COLL2
     COLL_REQS --> EXT_COLL3
-
-    %% Python packages
-    PY1[jmespath<br/>>=1.0.0]:::ext
-    PY2[netaddr<br/>>=0.8.0]:::ext
-    PY3[PyYAML<br/>>=6.0]:::ext
-
     PY_REQS --> PY1
     PY_REQS --> PY2
     PY_REQS --> PY3
-
-    %% System packages
-    SYS1[gcc]:::ext
-    SYS2[python3.11-devel]:::ext
-    SYS3[pkg-config]:::ext
-
     BINDEP --> SYS1
     BINDEP --> SYS2
     BINDEP --> SYS3
 
     %% Test scenarios
-    MOLECULE_DEFAULT[Molecule: default<br/>RockyLinux 9]:::test
-    MOLECULE_CENTOS[Molecule: centos<br/>CentOS 8]:::test
-    MOLECULE_UBUNTU[Molecule: ubuntu<br/>Ubuntu 22.04]:::test
+    subgraph TEST_SUB["Test Scenarios"]
+        MOLECULE_DEFAULT[Molecule: default<br/>RockyLinux 9]:::test
+        MOLECULE_CENTOS[Molecule: centos<br/>CentOS 8]:::test
+        MOLECULE_UBUNTU[Molecule: ubuntu<br/>Ubuntu 22.04]:::test
+    end
 
     MOLECULE --> MOLECULE_DEFAULT
     MOLECULE --> MOLECULE_CENTOS
     MOLECULE --> MOLECULE_UBUNTU
+
+    %% Improve line visibility
+    linkStyle default stroke:#333,stroke-width:2px
 
     %% Styling
     classDef manifest fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#000000
