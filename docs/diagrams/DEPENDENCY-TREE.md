@@ -19,11 +19,13 @@ flowchart TD
 
     %% Main Components
     AAP[AAP Configuration<br/>Git SHA]:::component
+    PLAY[Playbooks<br/>Git SHA]:::component
     COLL[Collections<br/>Git SHA]:::component
     EE[Execution Environment<br/>Image Digest]:::component
 
     %% Connect main components to release manifest
     RM --> AAP
+    RM --> PLAY
     RM --> COLL
     RM --> EE
 
@@ -44,6 +46,19 @@ flowchart TD
     AAP_REPO --> ORGS
     AAP_REPO --> PROJS
     AAP_REPO --> SCHEDS
+
+    %% Projects reference playbooks
+    PROJS --> PLAY_REPO
+
+    %% Playbooks subtree
+    PLAY_REPO[Playbooks Repository<br/>rh1-automation-playbooks]:::repo
+    PLAY --> PLAY_REPO
+
+    PLAYBOOK_FILES[Playbook Files<br/>*.yml files]:::config
+    PLAY_REPO --> PLAYBOOK_FILES
+
+    %% Playbooks call roles from collections
+    PLAYBOOK_FILES --> COLL_REPO
 
     %% Collections subtree
     COLL_REPO[Collection Repository<br/>rh1-custom-collection]:::repo
@@ -159,9 +174,10 @@ flowchart TD
    - Enables atomic promotion and rollback
 
 2. **Main Components** (Versioned by SHA/Digest)
-   - **AAP Configuration**: Job templates, inventories, credentials
-   - **Collections**: Ansible roles, modules, plugins
-   - **Execution Environment**: Container image with all dependencies
+   - **AAP Configuration**: Job templates, inventories, credentials, projects
+   - **Playbooks**: Ansible playbooks that orchestrate role execution
+   - **Collections**: Ansible roles, modules, plugins called by playbooks
+   - **Execution Environment**: Container image with all runtime dependencies
 
 3. **Git Repositories** (Source of Truth)
    - Five repositories that contain all configuration
@@ -217,9 +233,10 @@ When promoting a release:
 - **Immutable**: SHA256 digests ensure container reproducibility
 
 ### 2. Change Propagation
-- **Bottom-up**: Changes in roles/files bubble up to release
-- **Dependency-driven**: EE rebuilds when collections change
-- **Promotion-driven**: AAP config changes trigger new releases
+- **Bottom-up**: Changes in roles/files bubble up through playbooks to release
+- **Dependency-driven**: EE rebuilds when collections change, playbooks reference role versions
+- **Promotion-driven**: Changes to any component (roles/playbooks/config) trigger new releases
+- **Project isolation**: Projects reference specific playbook versions for stability
 
 ### 3. Testing Requirements
 - **Unit tests**: Molecule tests each role individually
@@ -272,7 +289,7 @@ When promoting a release:
 
 | Category | Components | Version Method |
 |----------|------------|----------------|
-| **Source Code** | Collections, AAP config, EE definition | Git SHA |
+| **Source Code** | Collections, Playbooks, AAP config, EE definition | Git SHA |
 | **Built Artifacts** | Container images | SHA256 digest |
 | **Dependencies** | Collections, Python packages | Version constraints |
 | **Metadata** | Release manifest itself | CalVer YY.MM.DD.PATCH |

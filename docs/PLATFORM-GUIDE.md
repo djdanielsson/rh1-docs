@@ -47,13 +47,14 @@ This platform implements a complete automation lifecycle using GitOps principles
 | **Release Manifest** | YAML file that version-locks all component Git SHAs and image digests |
 | **CalVer Versioning** | Releases use `YY.MM.DD.PATCH` format (e.g., `26.01.06.0`) |
 
-### The Five Repositories
+### The Six Repositories
 
 | Repository | Purpose | Managed By |
 |------------|---------|------------|
 | **cluster-config** | Platform GitOps—Kubernetes manifests, operators, AAP instances | ArgoCD |
-| **aap-config-as-code** | AAP configuration—job templates, inventories, credentials | Tekton |
-| **automation-collection-example** | Ansible content—roles, modules, plugins | Tekton (CI) |
+| **aap-config-as-code** | AAP configuration—job templates, inventories, credentials, projects | Tekton |
+| **automation-playbooks** | Ansible playbooks that orchestrate role execution | Tekton |
+| **automation-collection-example** | Ansible content—roles, modules, plugins called by playbooks | Tekton (CI) |
 | **automation-ee-example** | Execution Environment container definition | Tekton (build) |
 | **automation-release-manifest** | Release version tracking and promotion pipelines | Tekton |
 
@@ -449,6 +450,7 @@ The release manifest ensures you roll back **all components together**.
 | Platform Overview | [README.md](../README.md) |
 | cluster-config | [cluster-config/README.md](../cluster-config/README.md) |
 | aap-config-as-code | [aap-config-as-code/README.md](../aap-config-as-code/README.md) |
+| automation-playbooks | [automation-playbooks/README.md](../automation-playbooks/README.md) |
 | automation-collection-example | [automation-collection-example/README.md](../automation-collection-example/README.md) |
 | automation-ee-example | [automation-ee-example/README.md](../automation-ee-example/README.md) |
 | automation-release-manifest | [automation-release-manifest/README.md](../automation-release-manifest/README.md) |

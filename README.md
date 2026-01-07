@@ -41,9 +41,10 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 │
 ├── cluster-config/                      # Git Repo 1: Platform GitOps
 ├── aap-config-as-code/                  # Git Repo 2: AAP Configuration
-├── automation-collection-example/       # Git Repo 3: Ansible Collection
-├── automation-ee-example/               # Git Repo 4: Execution Environment
-└── automation-release-manifest/         # Git Repo 5: Release Management
+├── automation-playbooks/                # Git Repo 3: Ansible Playbooks
+├── automation-collection-example/       # Git Repo 4: Ansible Collection
+├── automation-ee-example/               # Git Repo 5: Execution Environment
+└── automation-release-manifest/         # Git Repo 6: Release Management
 ```
 
 ## The Five Git Repositories
@@ -59,12 +60,20 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 ### 2. aap-config-as-code (Application GitOps)
 - **Repository**: https://github.com/djdanielsson/rh1-aap-config-as-code.git
 - **Purpose**: Configure AAP via API using `infra.aap_configuration` collection
-- **Contents**: Playbooks, inventories, group_vars for dev/qa/prod
+- **Contents**: Job templates, projects, inventories, group_vars for dev/qa/prod
 - **Pattern**: dispatch role with wildcard variables
 - **Managed by**: Tekton pipelines
 - **[View README](./aap-config-as-code/README.md)**
 
-### 3. automation-collection-example (Ansible Collection)
+### 3. automation-playbooks (Ansible Playbooks)
+- **Repository**: https://github.com/djdanielsson/rh1-automation-playbooks.git
+- **Purpose**: Centralized repository for Ansible playbooks called by AAP Job Templates
+- **Contents**: Playbook files that orchestrate role execution from collections
+- **Pattern**: Role-based playbooks with variable abstraction
+- **Managed by**: Tekton pipelines (via AAP projects)
+- **[View README](./automation-playbooks/README.md)**
+
+### 4. automation-collection-example (Ansible Collection)
 - **Repository**: https://github.com/djdanielsson/rh1-custom-collection.git
 - **Purpose**: Example custom Ansible collection with roles, modules, plugins
 - **Contents**: 4 roles, 2 modules, 4 filters, 2 lookups, Molecule tests
@@ -72,7 +81,7 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 - **Testing**: Molecule scenarios, ansible-test sanity
 - **[View README](./automation-collection-example/README.md)**
 
-### 4. automation-ee-example (Execution Environment)
+### 5. automation-ee-example (Execution Environment)
 - **Repository**: https://github.com/djdanielsson/rh1-custom-ee.git
 - **Purpose**: Custom Execution Environment container image
 - **Contents**: execution-environment.yml, requirements.yml/txt, bindep.txt
@@ -80,7 +89,7 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 - **Base**: registry.redhat.io/ansible-automation-platform-26/ee-minimal-rhel9
 - **[View README](./automation-ee-example/README.md)**
 
-### 5. automation-release-manifest (Release Management)
+### 6. automation-release-manifest (Release Management)
 - **Repository**: https://github.com/djdanielsson/rh1-release-manifest.git
 - **Purpose**: Version-lock all components for atomic promotion between environments
 - **Contents**: Release manifests (YAML), Tekton pipelines, JSON schema
