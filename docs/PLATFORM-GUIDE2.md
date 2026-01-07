@@ -432,6 +432,7 @@ The release manifest ensures you roll back **all components together**.
 | [GitOps Loops](./diagrams/GITOPS-LOOPS.md) | Dual GitOps loop architecture (ArgoCD + Tekton) |
 | [Promotion Flow](./diagrams/PROMOTION-FLOW.md) | Release promotion and rollback process |
 | [Repository Structure](./diagrams/REPOSITORY-STRUCTURE.md) | Git repository organization |
+| [Dependency Tree](./diagrams/DEPENDENCY-TREE.md) | Complete dependency hierarchy and versioning |
 | [Workflow Diagrams](./diagrams/WORKFLOW-DIAGRAMS.md) | Git workflow and pipeline visualizations |
 
 ### Governance

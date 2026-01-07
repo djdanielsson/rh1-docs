@@ -37,6 +37,12 @@ This directory contains comprehensive architecture diagrams using Mermaid.js, wh
    - Access patterns
    - Branching strategy
 
+5. **[Dependency Tree](./DEPENDENCY-TREE.md)** ⭐
+   - Complete dependency hierarchy
+   - Version tracking relationships
+   - Component dependencies
+   - Atomic promotion requirements
+
 ---
 
 ## 🚀 Quick Start
@@ -326,7 +332,8 @@ mmdc -i docs/diagrams/PLATFORM-ARCHITECTURE.md -o /tmp/test.png
 | GitOps Loops | 10 | ~520 | Loops, Reconciliation |
 | Promotion Flow | 12 | ~680 | Promotion, Rollback, Gates |
 | Repository Structure | 9 | ~580 | Repos, Structure, Workflows |
-| **Total** | **39** | **~2,230** | **Full Platform** |
+| Dependency Tree | 1 | ~200 | Dependencies, Versioning |
+| **Total** | **40** | **~2,430** | **Full Platform** |
 
 ---
 
@@ -435,5 +442,6 @@ All diagrams are validated for:
 | 🔄 GitOps Explanation | [GitOps Loops](./GITOPS-LOOPS.md) |
 | 📦 Release Process | [Promotion Flow](./PROMOTION-FLOW.md) |
 | 📁 Code Organization | [Repository Structure](./REPOSITORY-STRUCTURE.md) |
+| 🔗 Dependency Tree | [Dependency Tree](./DEPENDENCY-TREE.md) |
 | 📚 Full Documentation | [Platform Guide](../PLATFORM-GUIDE.md) |
 | 🏠 Project Home | [Main README](../../README.md) |
