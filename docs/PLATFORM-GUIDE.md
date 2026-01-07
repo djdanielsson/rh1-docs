@@ -80,8 +80,6 @@ This section walks through the complete lifecycle of creating new automation and
 
 Create or modify roles in the `automation-collection-example` repository.
 
-Create or modify roles in the `automation-collection-example` repository.
-
 ```bash
 # Navigate to the collection
 cd automation-collection-example
