@@ -12,9 +12,9 @@ This platform implements a complete automation lifecycle using GitOps principles
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           PLATFORM ARCHITECTURE                              │
+│                           PLATFORM ARCHITECTURE                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
+│                                                                             │
 │   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
 │   │  COLLECTION  │───▶│  EXECUTION   │───▶│    AAP       │                  │
 │   │   (Roles)    │    │ ENVIRONMENT  │    │  CONFIG      │                  │
@@ -34,7 +34,7 @@ This platform implements a complete automation lifecycle using GitOps principles
 │   │     DEV      │───▶│     QA       │───▶│    PROD      │                  │
 │   │  (auto-sync) │    │ (manual gate)│    │  (approval)  │                  │
 │   └──────────────┘    └──────────────┘    └──────────────┘                  │
-│                                                                              │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
