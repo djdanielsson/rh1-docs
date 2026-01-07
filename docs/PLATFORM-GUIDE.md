@@ -15,27 +15,33 @@ This platform implements a complete automation lifecycle using GitOps principles
 │                           PLATFORM ARCHITECTURE                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
-│   │  COLLECTION  │───▶│   PLAYBOOK   │───▶│    AAP       │                  │
-│   │   (Roles)    │    │              │    │   CONFIG     │                  │
-│   └──────────────┘    └──────────────┘    └──────────────┘                  │
-│          │                   |                   |                          │
-│          │                   │                   │                          │
-│          └───────────────────┴───────────────────┘                          │
-│                              │                                              │
-│                              │                                              │
-│                              ▼                                              │
-│                    ┌──────────────────┐    ┌──────────────┐                 │
-│                    │ RELEASE MANIFEST │───▶│ EXECUTION    │                 │
-│                    │   (26.01.06.0)   │    │ ENVIRONMENT  │                 │
-│                    └──────────────────┘    └──────────────┘                 │
-│                              │                                              │
-│          ┌───────────────────┼───────────────────┐                          │
-│          ▼                   ▼                   ▼                          │
-│   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                  │
-│   │     DEV      │───▶│     QA       │───▶│    PROD      │                  │
-│   │  (auto-sync) │    │ (manual gate)│    │  (approval)  │                  │
-│   └──────────────┘    └──────────────┘    └──────────────┘                  │
+│   ┌──────────────┐         ┌──────────────┐         ┌──────────────┐        │
+│   │   PLAYBOOK   │────────▶│  COLLECTION  │────────▶│  EXECUTION   │        │
+│   │ (Orchestrate)│  uses   │   (Roles)    │ built   │  ENVIRONMENT │        │
+│   └──────────────┘         └──────────────┘  into   │   (Runtime)  │        │
+│          │                                          └──────────────┘        │
+│          │                                                 │                │
+│          │  referenced by                                  │  registered    │
+│          │  project in AAP                                 │  in AAP        │
+│          │                                                 │                │
+│          │                 ┌──────────────┐                │                │
+│          └────────────────▶│    AAP       │◀───────────────┘                │
+│                            │   CONFIG     │                                 │
+│                            │(JT+Proj+EE)  │                                 │
+│                            └──────────────┘                                 │
+│                                   │                                         │
+│                                   ▼                                         │
+│                        ┌──────────────────┐                                 │
+│                        │ RELEASE MANIFEST │ ◀── Locks all versions          │
+│                        │   (26.01.06.0)   │     (Playbook + Coll + EE +     │
+│                        └──────────────────┘      AAP Config SHAs/digests)   │
+│                                   │                                         │
+│            ┌──────────────────────┼──────────────────────┐                  │
+│            ▼                      ▼                      ▼                  │
+│     ┌──────────────┐       ┌──────────────┐       ┌──────────────┐          │
+│     │     DEV      │──────▶│     QA       │──────▶│    PROD      │          │
+│     │  (auto-sync) │       │ (manual gate)│       │  (approval)  │          │
+│     └──────────────┘       └──────────────┘       └──────────────┘          │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -214,30 +220,53 @@ vi playbooks/deploy-myapp.yml
 
 ---
 
-### Step 4: Configure AAP Job Template
+### Step 4: Configure AAP Resources
 
-Add or update job templates in the `aap-config-as-code` repository to define how your playbook runs.
+Add or update AAP resources in the `aap-config-as-code` repository. This includes execution environments, projects, and job templates.
 
 ```bash
 # Navigate to AAP config
 cd aap-config-as-code
-
-# Edit job templates
-vi inventory/group_vars/aap_dev/job_templates.yml
 ```
 
-**Add your job template:**
+**1. Configure Execution Environment in AAP:**
 
 ```yaml
-controller_job_templates_dev:
+# inventory/group_vars/aap_dev/execution_environments.yml
+controller_execution_environments:
+  - name: "Custom EE (Dev)"
+    description: "Custom Execution Environment with org collections"
+    image: "quay.io/myorg/custom-ee:dev"  # Built from automation-ee-example
+    pull: "missing"  # or "always" for latest
+    credential: "Container Registry"  # Optional: for private registries
+```
+
+**2. Configure Project (references playbooks repo):**
+
+```yaml
+# inventory/group_vars/aap_dev/projects.yml
+controller_projects:
+  - name: "Automation Playbooks"
+    description: "Centralized automation playbooks"
+    scm_type: git
+    scm_url: https://github.com/djdanielsson/rh1-automation-playbooks.git
+    scm_branch: main
+    credential: "GitHub Token"
+```
+
+**3. Configure Job Template (ties everything together):**
+
+```yaml
+# inventory/group_vars/aap_dev/job_templates.yml
+controller_job_templates:
   - name: "Deploy My App (Dev)"
     description: "Deploy my application using my_new_role"
     job_type: run
     organization: Default
     inventory: "Dev Servers"
-    project: "Automation Playbooks"  # References playbook repo
-    playbook: "playbooks/deploy-myapp.yml"
-    execution_environment: "Custom EE (Dev)"
+    project: "Automation Playbooks"        # → References playbooks repo
+    playbook: "playbooks/deploy-myapp.yml" # → Playbook in that repo
+    execution_environment: "Custom EE (Dev)" # → EE defined above
     credentials:
       - "Dev SSH Key"
     ask_variables_on_launch: true
@@ -245,17 +274,10 @@ controller_job_templates_dev:
       app_name: "myapp"
 ```
 
-**Ensure project references playbooks:**
-
-```yaml
-# inventory/group_vars/aap_dev/projects.yml
-controller_projects:
-  - name: "Automation Playbooks"
-    scm_type: git
-    scm_url: https://github.com/djdanielsson/rh1-automation-playbooks.git
-    scm_branch: main
-    credential: "GitHub Token"
-```
+**Dependency chain:**
+- **Job Template** references **Project** (playbooks) + **Execution Environment**
+- **Playbook** calls **Roles** from collections (bundled in EE)
+- **EE** contains collections + Python packages + system deps
 
 📘 **More details**: [aap-config-as-code README](../aap-config-as-code/README.md)
 

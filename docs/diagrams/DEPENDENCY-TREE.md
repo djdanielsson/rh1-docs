@@ -36,6 +36,7 @@ graph TD
         AAP_REPO[AAP Config Repository<br/>rh1-aap-config-as-code]:::repo
         JT[Job Templates<br/>*.yml files]:::config
         PROJS[Projects<br/>projects.yml]:::config
+        EE_CONFIG[Execution Environments<br/>execution_environments.yml]:::config
         INV[Inventories<br/>inventory_*.yml]:::config
         CREDS[Credentials<br/>credentials.yml]:::config
         ORGS[Organizations<br/>organizations.yml]:::config
@@ -45,13 +46,21 @@ graph TD
     AAP --> AAP_REPO
     AAP_REPO --> JT
     AAP_REPO --> PROJS
+    AAP_REPO --> EE_CONFIG
     AAP_REPO --> INV
     AAP_REPO --> CREDS
     AAP_REPO --> ORGS
     AAP_REPO --> SCHEDS
 
+    %% Job Templates reference Projects and EEs
+    JT -.-> PROJS
+    JT -.-> EE_CONFIG
+
     %% Projects reference playbooks - clear connection
     PROJS -.-> PLAY_REPO
+
+    %% EE Config references the built EE image
+    EE_CONFIG -.-> EE
 
     %% Playbooks subtree
     subgraph PLAY_SUB["Playbooks Details"]
