@@ -76,7 +76,24 @@ This platform implements a complete automation lifecycle using GitOps principles
 
 This section walks through the complete lifecycle of creating new automation and moving it through all environments.
 
-### Step 1: Develop Your Role
+### Execution Environments: Dev vs Release
+
+Before diving into the workflow, understand how EEs work across environments:
+
+| Environment | EE Tag | Behavior |
+|-------------|--------|----------|
+| **Dev** | `:dev` or `:latest` | Auto-rebuilt on every collection/EE repo merge. Uses `pull: always` to get latest. |
+| **QA/Prod** | `@sha256:...` (digest) | Locked to exact image digest in release manifest. Immutable. |
+
+**Why this matters**: Collections are bundled *inside* the EE at build time. When you change a collection, you must rebuild the EE before those changes are available in AAP. In Dev, this happens automatically. For releases, the manifest locks the exact digest.
+
+```
+Collection Change → EE Rebuild → New EE Image Available → CaC references new EE
+```
+
+---
+
+### Step 1: Develop Your Content
 
 Create or modify roles in the `automation-collection-example` repository.
 
@@ -127,9 +144,35 @@ my_new_role_config_path: /etc/httpd/conf/httpd.conf
 
 ---
 
-### Step 2: Write Tests
+### Step 2: Lint Your Content
 
-Every role needs Molecule tests. Test-driven development is enforced.
+Lint immediately after writing code—catch issues early before writing tests.
+
+```bash
+cd automation-collection-example
+
+# Run ansible-lint on your new role
+ansible-lint roles/my_new_role
+
+# Run yamllint for YAML syntax
+yamllint roles/my_new_role
+
+# Fix any issues before proceeding to tests
+```
+
+**Common issues caught at this stage:**
+- Missing FQCNs (fully qualified collection names)
+- Incorrect indentation
+- Missing `name` on tasks
+- Deprecated modules
+
+📘 **More details**: [Pre-commit Guide](./PRE-COMMIT-GUIDE.md) | [Code Style Guide](./CODE-STYLE-GUIDE.md)
+
+---
+
+### Step 3: Create Molecule Tests
+
+Every role needs Molecule tests. Write tests for your role.
 
 ```yaml
 # roles/my_new_role/molecule/default/converge.yml
@@ -156,36 +199,179 @@ Every role needs Molecule tests. Test-driven development is enforced.
         that: ansible_facts.services['httpd.service'].state == 'running'
 ```
 
-**Run tests locally:**
+📘 **More details**: [Testing Guide](./TESTING-GUIDE.md)
+
+---
+
+### Step 4: Lint Test Files
+
+Lint your Molecule test files—tests are code too.
+
+```bash
+cd automation-collection-example
+
+# Lint the molecule test playbooks
+ansible-lint roles/my_new_role/molecule/
+
+# Lint YAML syntax
+yamllint roles/my_new_role/molecule/
+```
+
+**Ensure tests follow the same quality standards as the role itself.**
+
+---
+
+### Step 5: Run Molecule Tests
+
+Execute Molecule tests to verify your role works correctly.
 
 ```bash
 cd roles/my_new_role
 molecule test
 
-# Or step-by-step:
+# Or step-by-step for debugging:
 molecule create    # Spin up test container
 molecule converge  # Run the role
 molecule verify    # Run verification tests
 molecule destroy   # Clean up
 ```
 
+**All tests must pass before proceeding.**
+
 📘 **More details**: [Testing Guide](./TESTING-GUIDE.md)
 
 ---
 
-### Step 3: Create or Update Playbook
+### Step 6: Final Quality Gate - Lint & Scan All
 
-Create or modify playbooks in the `automation-playbooks` repository to orchestrate your role.
+Run comprehensive linting and security scanning on the entire codebase.
 
 ```bash
-# Navigate to playbooks repository
-cd automation-playbooks
+cd automation-collection-example
 
-# Create a new playbook
-vi playbooks/deploy-myapp.yml
+# Run all pre-commit hooks (lint, format, scan)
+pre-commit run --all-files
+
+# This runs:
+# - ansible-lint (entire collection)
+# - yamllint
+# - check-yaml
+# - end-of-file-fixer
+# - trailing-whitespace
+# - detect-secrets
+# - check-executables-have-shebangs
 ```
 
-**Example playbook that calls your role:**
+**Pre-commit hooks run automatically on commit**, but running manually ensures clean commits.
+
+📘 **More details**: [Pre-commit Guide](./PRE-COMMIT-GUIDE.md) | [Validation & Quality](./VALIDATION-QUALITY-GUIDE.md)
+
+---
+
+### Step 7: Update Execution Environment
+
+Since collections are bundled *inside* the EE, you must rebuild it after collection changes.
+
+```bash
+cd automation-ee-example
+
+# The EE pulls your collection via requirements.yml
+# If you added new Python deps in your role, add them:
+vi requirements.txt
+# Add: my-new-package>=1.0.0
+
+# If you need system packages:
+vi bindep.txt
+# Add: my-system-package
+
+# Commit and push to trigger EE rebuild
+git commit -am "Update deps for my_new_role"
+git push origin main
+
+# Tekton automatically builds new EE with:
+# - Your updated collection (from main branch)
+# - Any new dependencies
+# - Tagged as :dev for development use
+```
+
+**For Dev environment**: EE is tagged `:dev` and auto-rebuilds. AAP pulls latest on each job run.
+
+**For Releases**: The release manifest will lock the specific `@sha256:...` digest.
+
+📘 **More details**: [EE Versioning Strategy](./EE-VERSIONING-STRATEGY.md)
+
+---
+
+### Step 8: Configure AAP Resources (Config as Code)
+
+Now that the EE is rebuilt with your collection, configure AAP to use it.
+
+```bash
+cd aap-config-as-code
+```
+
+**1. Verify Execution Environment is configured:**
+
+```yaml
+# inventory/group_vars/aap_dev/execution_environments.yml
+controller_execution_environments:
+  - name: "Custom EE"
+    description: "Custom Execution Environment with org collections"
+    image: "quay.io/myorg/custom-ee:dev"  # :dev tag auto-updates
+    pull: "always"  # Always pull latest for dev
+    credential: "Container Registry"
+```
+
+**2. Configure Project (if new playbook repo needed):**
+
+```yaml
+# inventory/group_vars/aap_dev/projects.yml
+controller_projects:
+  - name: "Automation Playbooks"
+    description: "Centralized automation playbooks"
+    scm_type: git
+    scm_url: https://github.com/djdanielsson/rh1-automation-playbooks.git
+    scm_branch: main
+    credential: "GitHub Token"
+```
+
+**3. Add Job Template for your new automation:**
+
+```yaml
+# inventory/group_vars/aap_dev/job_templates.yml
+controller_job_templates:
+  - name: "Deploy My App"
+    description: "Deploy my application using my_new_role"
+    job_type: run
+    organization: Default
+    inventory: "Dev Servers"
+    project: "Automation Playbooks"
+    playbook: "playbooks/deploy-myapp.yml"
+    execution_environment: "Custom EE"
+    credentials:
+      - "Dev SSH Key"
+    ask_variables_on_launch: true
+    extra_vars:
+      app_name: "myapp"
+```
+
+**Dependency chain:**
+- **Job Template** references **Project** (playbooks) + **Execution Environment**
+- **Playbook** calls **Roles** from collections (bundled in EE)
+- **EE** contains collections + Python packages + system deps
+
+📘 **More details**: [aap-config-as-code README](../aap-config-as-code/README.md)
+
+---
+
+### Step 9: Create or Update Playbook
+
+If you need a new playbook to orchestrate your role, create it in `automation-playbooks`.
+
+```bash
+cd automation-playbooks
+vi playbooks/deploy-myapp.yml
+```
 
 ```yaml
 ---
@@ -214,147 +400,33 @@ vi playbooks/deploy-myapp.yml
         status_code: 200
 ```
 
+**Lint the playbook:**
+
+```bash
+ansible-lint playbooks/deploy-myapp.yml
+pre-commit run --all-files
+```
+
 📘 **More details**: [automation-playbooks README](../automation-playbooks/README.md)
 
 ---
 
-### Step 4: Configure AAP Resources
+### Step 10: Create Pull Requests
 
-Add or update AAP resources in the `aap-config-as-code` repository. This includes execution environments, projects, and job templates.
-
-```bash
-# Navigate to AAP config
-cd aap-config-as-code
-```
-
-**1. Configure Execution Environment in AAP:**
-
-```yaml
-# inventory/group_vars/aap_dev/execution_environments.yml
-controller_execution_environments:
-  - name: "Custom EE (Dev)"
-    description: "Custom Execution Environment with org collections"
-    image: "quay.io/myorg/custom-ee:dev"  # Built from automation-ee-example
-    pull: "missing"  # or "always" for latest
-    credential: "Container Registry"  # Optional: for private registries
-```
-
-**2. Configure Project (references playbooks repo):**
-
-```yaml
-# inventory/group_vars/aap_dev/projects.yml
-controller_projects:
-  - name: "Automation Playbooks"
-    description: "Centralized automation playbooks"
-    scm_type: git
-    scm_url: https://github.com/djdanielsson/rh1-automation-playbooks.git
-    scm_branch: main
-    credential: "GitHub Token"
-```
-
-**3. Configure Job Template (ties everything together):**
-
-```yaml
-# inventory/group_vars/aap_dev/job_templates.yml
-controller_job_templates:
-  - name: "Deploy My App (Dev)"
-    description: "Deploy my application using my_new_role"
-    job_type: run
-    organization: Default
-    inventory: "Dev Servers"
-    project: "Automation Playbooks"        # → References playbooks repo
-    playbook: "playbooks/deploy-myapp.yml" # → Playbook in that repo
-    execution_environment: "Custom EE (Dev)" # → EE defined above
-    credentials:
-      - "Dev SSH Key"
-    ask_variables_on_launch: true
-    extra_vars:
-      app_name: "myapp"
-```
-
-**Dependency chain:**
-- **Job Template** references **Project** (playbooks) + **Execution Environment**
-- **Playbook** calls **Roles** from collections (bundled in EE)
-- **EE** contains collections + Python packages + system deps
-
-📘 **More details**: [aap-config-as-code README](../aap-config-as-code/README.md)
-
----
-
-### Step 5: Update Execution Environment (if needed)
-
-If your role requires new dependencies, update the `automation-ee-example` repository.
+Push changes to all modified repositories and create PRs. CI runs automatically.
 
 ```bash
-# Check if new dependencies are needed
-cd automation-ee-example
-
-# Update Python packages
-vi requirements.txt
-# Add: my-new-package>=1.0.0
-
-# Update Ansible collections
-vi requirements.yml
-# Add your collection dependency
-
-# Update system packages if needed
-vi bindep.txt
-# Add: my-system-package
-```
-
-Push changes to trigger EE rebuild:
-
-```bash
-git commit -am "Add dependencies for my_new_role"
-git push origin main
-# Tekton automatically builds new EE image
-```
-
-📘 **More details**: [EE Versioning Strategy](./EE-VERSIONING-STRATEGY.md)
-
----
-
-### Step 6: Validate Quality
-
-Run linting and quality checks before committing.
-
-```bash
-# Run ansible-lint
-ansible-lint roles/my_new_role
-
-# Run yamllint
-yamllint roles/my_new_role
-
-# Run all pre-commit hooks
-pre-commit run --all-files
-```
-
-**Pre-commit hooks run automatically on commit**, catching issues before they reach CI.
-
-📘 **More details**: [Pre-commit Guide](./PRE-COMMIT-GUIDE.md) | [Validation & Quality](./VALIDATION-QUALITY-GUIDE.md)
-
----
-
-### Step 7: Create Pull Request
-
-Push your changes and create a PR. CI runs automatically.
-
-```bash
-# Create feature branch
+# For each repository with changes:
 git checkout -b feature/my-new-role
-
-# Commit changes
-git add roles/my_new_role
+git add .
 git commit -m "Add my_new_role for application deployment"
-
-# Push and create PR
 git push origin feature/my-new-role
 gh pr create --title "Add my_new_role" --body "Adds deployment automation for XYZ"
 ```
 
-**CI Pipeline runs:**
+**CI Pipeline runs on each PR:**
 1. ✅ ansible-lint
-2. ✅ yamllint  
+2. ✅ yamllint
 3. ✅ molecule test (all scenarios)
 4. ✅ Secret scanning
 5. ✅ Collection build verification
@@ -363,31 +435,58 @@ gh pr create --title "Add my_new_role" --body "Adds deployment automation for XY
 
 ---
 
-### Step 8: Merge to Main → Auto-Deploy to Dev
+### Step 11: Merge to Main → Auto-Deploy to Dev
 
-After PR approval and merge, changes automatically deploy to the Dev environment.
+After PR approvals and merges, changes automatically deploy to the Dev environment.
 
 ```
-PR Merged → Webhook → Tekton Pipeline → Dev AAP Updated
-                                              │
-                                              ▼
-                                    Test in Dev Environment
+Collection PR Merged → EE Rebuild Triggered → New :dev image pushed
+                                                      │
+CaC PR Merged → Tekton Pipeline → Dev AAP Updated ◀───┘
+                                        │
+                                        ▼
+                              Ready for Dev Testing
 ```
 
-The inner loop is fast—typically under 1 minute from merge to deployment.
+**Order matters for merging:**
+1. First: Collection changes (triggers EE rebuild)
+2. Second: EE changes (if any direct changes needed)
+3. Third: Playbook changes
+4. Fourth: Config-as-Code changes (references the new EE)
+
+The inner loop is fast—typically under 5 minutes from final merge to full deployment.
 
 📘 **More details**: [GitOps Loops](./diagrams/GITOPS-LOOPS.md)
 
 ---
 
+### Step 12: Test in Dev Environment
+
+Validate your automation works in the Dev AAP instance.
+
+```bash
+# Via AAP UI:
+# 1. Navigate to Job Templates
+# 2. Launch "Deploy My App"
+# 3. Verify successful execution
+
+# Via AAP API/CLI:
+awx job_templates launch "Deploy My App" --extra_vars '{"app_name": "test"}'
+```
+
+**Verify:**
+- ✅ Job completes successfully
+- ✅ Target systems are configured correctly
+- ✅ No unexpected changes (idempotency)
+- ✅ Logs show expected behavior
+
+**Fix any issues** by returning to Step 1 and iterating.
 
 ---
 
+### Step 13: Create Release Manifest for QA
 
----
-
-
-When ready to promote to QA, create a release manifest that locks all component versions.
+When Dev testing passes, create a release manifest that locks all component versions.
 
 ```yaml
 # automation-release-manifest/releases/release-26.01.06.0.yaml
@@ -397,21 +496,26 @@ created: "2026-01-06T10:00:00Z"
 components:
   aap_configuration:
     repository: "https://github.com/djdanielsson/rh1-aap-config-as-code.git"
-    ref: "abc123def456..."  # Git SHA
+    ref: "abc123def456..."  # Exact Git SHA from dev
   execution_environment:
     repository: "https://github.com/djdanielsson/rh1-custom-ee.git"
     ref: "789ghi012jkl..."
-    image: "quay.io/org/custom-ee@sha256:..."  # Image digest
+    image: "quay.io/org/custom-ee@sha256:..."  # Exact image digest (not :dev tag!)
+  playbooks:
+    repository: "https://github.com/djdanielsson/rh1-automation-playbooks.git"
+    ref: "stu901vwx234..."
   collections:
     repository: "https://github.com/djdanielsson/rh1-custom-collection.git"
     ref: "mno345pqr678..."
 ```
 
+**Key**: Use `@sha256:...` digest for EE, not `:dev` tag. This ensures QA/Prod get the exact same image.
+
 📘 **More details**: [Promotion Flow](./diagrams/PROMOTION-FLOW.md) | [automation-release-manifest README](../automation-release-manifest/README.md)
 
 ---
 
-### Step 9: Promote to QA
+### Step 14: Promote to QA
 
 Tag and push to trigger promotion to QA.
 
@@ -428,17 +532,22 @@ git push origin main --tags
 
 # Tekton promotion pipeline runs:
 # 1. Parses manifest
-# 2. Builds/pulls exact versions
+# 2. Pulls exact versions (by SHA/digest)
 # 3. Deploys to QA AAP
 ```
 
-**All components deploy atomically**—same versions of EE, CaC, and collections.
+**All components deploy atomically**—same versions of EE, CaC, playbooks, and collections.
+
+**QA Testing:**
+- Run job templates in QA environment
+- Validate against QA infrastructure
+- Document any issues found
 
 📘 **More details**: [Git Workflow](./GIT-WORKFLOW.md)
 
 ---
 
-### Step 10: Promote to Production
+### Step 15: Promote to Production
 
 After QA validation, promote to production with manual approval.
 
