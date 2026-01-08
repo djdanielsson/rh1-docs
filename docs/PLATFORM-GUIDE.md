@@ -302,69 +302,7 @@ git push origin main
 
 ---
 
-### Step 8: Configure AAP Resources (Config as Code)
-
-Now that the EE is rebuilt with your collection, configure AAP to use it.
-
-```bash
-cd aap-config-as-code
-```
-
-**1. Verify Execution Environment is configured:**
-
-```yaml
-# inventory/group_vars/aap_dev/execution_environments.yml
-controller_execution_environments:
-  - name: "Custom EE"
-    description: "Custom Execution Environment with org collections"
-    image: "quay.io/myorg/custom-ee:dev"  # :dev tag auto-updates
-    pull: "always"  # Always pull latest for dev
-    credential: "Container Registry"
-```
-
-**2. Configure Project (if new playbook repo needed):**
-
-```yaml
-# inventory/group_vars/aap_dev/projects.yml
-controller_projects:
-  - name: "Automation Playbooks"
-    description: "Centralized automation playbooks"
-    scm_type: git
-    scm_url: https://github.com/djdanielsson/rh1-automation-playbooks.git
-    scm_branch: main
-    credential: "GitHub Token"
-```
-
-**3. Add Job Template for your new automation:**
-
-```yaml
-# inventory/group_vars/aap_dev/job_templates.yml
-controller_job_templates:
-  - name: "Deploy My App"
-    description: "Deploy my application using my_new_role"
-    job_type: run
-    organization: Default
-    inventory: "Dev Servers"
-    project: "Automation Playbooks"
-    playbook: "playbooks/deploy-myapp.yml"
-    execution_environment: "Custom EE"
-    credentials:
-      - "Dev SSH Key"
-    ask_variables_on_launch: true
-    extra_vars:
-      app_name: "myapp"
-```
-
-**Dependency chain:**
-- **Job Template** references **Project** (playbooks) + **Execution Environment**
-- **Playbook** calls **Roles** from collections (bundled in EE)
-- **EE** contains collections + Python packages + system deps
-
-📘 **More details**: [aap-config-as-code README](../aap-config-as-code/README.md)
-
----
-
-### Step 9: Create or Update Playbook
+### Step 8: Create or Update Playbook
 
 If you need a new playbook to orchestrate your role, create it in `automation-playbooks`.
 
@@ -408,6 +346,68 @@ pre-commit run --all-files
 ```
 
 📘 **More details**: [automation-playbooks README](../automation-playbooks/README.md)
+
+---
+
+### Step 9: Configure AAP Resources (Config as Code)
+
+Now that you have the playbook, configure AAP to use it along with the rebuilt EE.
+
+```bash
+cd aap-config-as-code
+```
+
+**1. Verify Execution Environment is configured:**
+
+```yaml
+# inventory/group_vars/aap_dev/execution_environments.yml
+controller_execution_environments:
+  - name: "Custom EE"
+    description: "Custom Execution Environment with org collections"
+    image: "quay.io/myorg/custom-ee:dev"  # :dev tag auto-updates
+    pull: "always"  # Always pull latest for dev
+    credential: "Container Registry"
+```
+
+**2. Configure Project (if new playbook repo needed):**
+
+```yaml
+# inventory/group_vars/aap_dev/projects.yml
+controller_projects:
+  - name: "Automation Playbooks"
+    description: "Centralized automation playbooks"
+    scm_type: git
+    scm_url: https://github.com/djdanielsson/rh1-automation-playbooks.git
+    scm_branch: main
+    credential: "GitHub Token"
+```
+
+**3. Add Job Template for your new automation:**
+
+```yaml
+# inventory/group_vars/aap_dev/job_templates.yml
+controller_job_templates:
+  - name: "Deploy My App"
+    description: "Deploy my application using my_new_role"
+    job_type: run
+    organization: Default
+    inventory: "Dev Servers"
+    project: "Automation Playbooks"        # → References playbooks repo
+    playbook: "playbooks/deploy-myapp.yml" # → Playbook you just created
+    execution_environment: "Custom EE"     # → EE rebuilt with your collection
+    credentials:
+      - "Dev SSH Key"
+    ask_variables_on_launch: true
+    extra_vars:
+      app_name: "myapp"
+```
+
+**Dependency chain:**
+- **Job Template** references **Project** (playbooks) + **Execution Environment**
+- **Playbook** calls **Roles** from collections (bundled in EE)
+- **EE** contains collections + Python packages + system deps
+
+📘 **More details**: [aap-config-as-code README](../aap-config-as-code/README.md)
 
 ---
 
