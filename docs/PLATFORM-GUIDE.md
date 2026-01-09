@@ -362,11 +362,11 @@ cd aap-config-as-code
 ```yaml
 # inventory/group_vars/aap_dev/execution_environments.yml
 controller_execution_environments:
-  - name: "Custom EE"
+  - name: "eng_automation_ee_26.01.06.0"
     description: "Custom Execution Environment with org collections"
-    image: "quay.io/myorg/custom-ee:dev"  # :dev tag auto-updates
+    image: "quay.io/company/custom-ee:dev"  # :dev tag auto-updates
     pull: "always"  # Always pull latest for dev
-    credential: "Container Registry"
+    credential: "eng_registry_quay_io"
 ```
 
 **2. Configure Project (if new playbook repo needed):**
@@ -374,12 +374,12 @@ controller_execution_environments:
 ```yaml
 # inventory/group_vars/aap_dev/projects.yml
 controller_projects:
-  - name: "Automation Playbooks"
+  - name: "eng_automation_playbooks"
     description: "Centralized automation playbooks"
     scm_type: git
-    scm_url: https://github.com/djdanielsson/rh1-automation-playbooks.git
+    scm_url: https://github.com/company/automation-playbooks.git
     scm_branch: main
-    credential: "GitHub Token"
+    credential: "eng_source_control_github_main"
 ```
 
 **3. Add Job Template for your new automation:**
@@ -387,16 +387,16 @@ controller_projects:
 ```yaml
 # inventory/group_vars/aap_dev/job_templates.yml
 controller_job_templates:
-  - name: "Deploy My App"
+  - name: "eng_deploy_webapp_main"
     description: "Deploy my application using my_new_role"
     job_type: run
     organization: Default
-    inventory: "Dev Servers"
-    project: "Automation Playbooks"        # → References playbooks repo
-    playbook: "playbooks/deploy-myapp.yml" # → Playbook you just created
-    execution_environment: "Custom EE"     # → EE rebuilt with your collection
+    inventory: "eng_webservers"
+    project: "eng_automation_playbooks"        # → References playbooks repo
+    playbook: "playbooks/deploy-myapp.yml"     # → Playbook you just created
+    execution_environment: "eng_automation_ee_26.01.06.0" # → EE rebuilt with your collection
     credentials:
-      - "Dev SSH Key"
+      - "eng_machine_linux_servers"
     ask_variables_on_launch: true
     extra_vars:
       app_name: "myapp"

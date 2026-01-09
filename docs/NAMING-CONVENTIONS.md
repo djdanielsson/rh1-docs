@@ -443,136 +443,437 @@ rbac-app
 
 ## AAP Resource Naming
 
+**STRICT CONVENTIONS**: All AAP resources must follow these exact formats. Names are **lowercase only**, **no spaces** (use underscores), and **include the org short name** for uniqueness.
+
+### AAP Organization Naming
+
+**Organization objects** use full descriptive names, but **when used as prefixes** in other resource names, use abbreviated forms. This ensures uniqueness within each AAP instance and helps admins identify which organization owns each resource.
+
+```bash
+# Organization objects (full names):
+engineering    # Full name in AAP
+platform       # Full name in AAP
+operations     # Full name in AAP
+
+# Prefix abbreviations (for other resources):
+eng_     # Engineering organization (abbreviated)
+plat_    # Platform team organization (abbreviated)
+ops_     # Operations organization (abbreviated)
+sec_     # Security team organization (abbreviated)
+dev_     # Development organization (abbreviated)
+
+# Examples of common abbreviations:
+admin_   # Administration
+dba_     # Database administration
+net_     # Network team
+infra_   # Infrastructure
+```
+
+### AAP Variable File Organization
+
+AAP resources are organized into two categories based on their coupling and reusability:
+
+#### Shared Resource Files (one file per object type)
+
+Resources that are reused across multiple JTs are defined in dedicated files named after the object type. This prevents duplicate definitions and makes shared resources easy to find and update.
+
+```
+group_vars/all/
+  credentials.yml           # All credentials (shared across JTs)
+  inventories.yml           # All inventories (shared across JTs)
+  schedules.yml             # All schedules
+  teams.yml                 # All teams
+  organizations.yml         # All organizations
+  labels.yml                # All labels
+
+# Variable naming in shared files: controller_{resource_type}_all
+controller_credentials_all:
+  - name: "eng_machine_ansible_linux_prod"
+    ...
+  - name: "ops_machine_ansible_linux_prod"
+    ...
+
+controller_inventories_all:
+  - name: "eng_webservers_prod"
+    ...
+  - name: "ops_databases_prod"
+    ...
+```
+
+#### JT Bundle Files (EE + Project + JT together)
+
+Execution Environments, Projects, and Job Templates are tightly coupled and versioned together. These are defined in JT-specific files to ensure they stay in sync.
+
+```
+group_vars/all/
+  jt_eng_deploy_webapp.yml              # EE + Project + JT for eng webapp
+  jt_ops_backup_database_daily.yml      # EE + Project + JT for ops db backup
+
+# Variable naming: controller_{resource_type}_{org}_{jt_suffix}
+# The suffix MUST include org abbreviation to guarantee uniqueness
+controller_execution_environments_eng_deploy_webapp:
+  - name: "eng_automation_ee_26.01.06.0"
+    ...
+
+controller_projects_eng_deploy_webapp:
+  - name: "eng_webapp_deploy_playbooks"
+    ...
+
+controller_templates_eng_deploy_webapp:
+  - name: "eng_deploy_webapp_prod"
+    ...
+```
+
+#### Why This Structure?
+
+| Resource Type | File Location | Reason |
+|---------------|---------------|--------|
+| Credentials | `credentials.yml` | Shared by many JTs, defined once |
+| Inventories | `inventories.yml` | Shared by many JTs, defined once |
+| Schedules | `schedules.yml` | References JTs, easier to manage together |
+| EE + Project + JT | `jt_*.yml` | Tightly coupled, versioned together |
+
+**Benefits:**
+- Shared resources dedupe naturally (defined once)
+- JT bundles version together (EE change = project change = JT change)
+- Easy to find where a resource is defined
+- Clear separation of concerns
+
 ### Organizations
 
 ```
-# Format: {Department/Team Name}
-Engineering
-Operations
-Platform Team
-Security Team
+# Format: {aap_org_full_name}
+# All lowercase, underscores only
 
-# Not abbreviations:
-Eng
-Ops
+engineering
+platform
+operations
+security
+development
+
+# Not:
+Engineering Team
+eng
+eng_team
 ```
 
 ### Teams
 
 ```
-# Format: {Team Name}
+# Format: {aap_org_abbrev}_{purpose}
+# All lowercase, underscores only
+
+eng_admins
+plat_engineers
+ops_oncall
+sec_auditors
+dev_developers
+
+# Not:
 Platform Team
-Application Team
-DevOps Team
-Database Team
+Development Engineers
+eng_team
+platform-engineers
 ```
 
 ### Credentials
 
+Credentials require identity information to ensure uniqueness. Multiple credentials may access the same target with different users/service accounts.
+
 ```
-# Format: {Type} - {Purpose/Target}
-Linux Servers
-Windows Servers
-GitHub - Main
-GitLab - Internal
-AWS - Production
-Quay.io
-HashiCorp Vault
+# Format: {org}_{type}_{identity}_{target}
+# All lowercase, underscores only
+# Identity = username, service account, or key identifier
+
+eng_machine_ansible_linux_prod          # ansible user -> prod linux servers
+eng_machine_svc_deploy_linux_prod       # svc_deploy user -> prod linux servers
+plat_scm_git_github_main                # git user -> github main org
+plat_scm_svc_cicd_github_main           # svc_cicd user -> github main org
+ops_cloud_svc_backup_aws_prod           # svc_backup role -> AWS prod account
+ops_registry_svc_builder_quay_io        # svc_builder -> quay.io registry
+sec_vault_app_secrets_hashicorp_main    # app_secrets policy -> HashiCorp Vault
+plat_k8s_sa_admin_ocp_prod              # sa_admin service account -> OCP prod
+
+# Type abbreviations (keep short for readability):
+# machine_   - SSH/Machine credentials
+# scm_       - Source control (git)
+# cloud_     - Cloud provider (AWS, Azure, GCP)
+# registry_  - Container registry
+# vault_     - Secret management
+# k8s_       - Kubernetes/OpenShift API
+# token_     - API tokens
+# password_  - Username/password combos
+
+# Identity patterns:
+# {username}     - Human user (ansible, admin)
+# svc_{name}     - Service account (svc_deploy, svc_cicd)
+# sa_{name}      - Kubernetes service account (sa_admin)
+# app_{name}     - Application identity (app_secrets)
+
+# Target patterns:
+# {platform}_{env}    - linux_prod, aws_prod, ocp_dev
+# {service}_{scope}   - github_main, quay_io, hashicorp_main
 
 # Not:
-ssh-key
-git-creds
-aws
+Linux Servers                    # No spaces
+GitHub - Main                    # No spaces or special chars
+eng_machine_linux_servers        # Missing identity (which user?)
+linux-servers                    # Wrong separator
 ```
 
 ### Projects
 
+Projects typically map 1:1 to git repositories. Include the repository purpose and scope to ensure uniqueness.
+
 ```
-# Format: {Purpose/Name}
-Infrastructure Playbooks
-Application Deployment
-AAP Configuration
-Security Compliance
-Database Management
+# Format: {org}_{domain}_{purpose}_{type}
+# All lowercase, underscores only
+# Domain = application/system area this project manages
+
+eng_webapp_deploy_playbooks             # Webapp deployment playbooks
+eng_webapp_config_playbooks             # Webapp configuration playbooks
+plat_infra_core_config                  # Core infrastructure config
+plat_infra_network_config               # Network infrastructure config
+ops_database_backup_playbooks           # Database backup automation
+ops_database_restore_playbooks          # Database restore automation
+sec_compliance_scan_playbooks           # Compliance scanning
+sec_vulnerability_remediate_playbooks   # Vulnerability remediation
+dev_testing_molecule_framework          # Molecule testing framework
+
+# Domain prefixes (what system/app area):
+# webapp_        - Web application
+# infra_         - Infrastructure
+# database_      - Database systems
+# network_       - Network equipment
+# container_     - Container/Kubernetes
+# monitoring_    - Monitoring systems
+# security_      - Security tooling
+
+# Purpose (what action/function):
+# deploy_        - Deployment automation
+# config_        - Configuration management
+# backup_        - Backup operations
+# restore_       - Restore operations
+# scan_          - Scanning/auditing
+# remediate_     - Fix/remediation
+# patch_         - Patching
+
+# Type suffixes:
+# _playbooks     - Ansible playbooks repository
+# _config        - Configuration repository
+# _framework     - Testing/development framework
+# _collection    - Ansible collection
 
 # Not:
-infra
-app-deploy
-config
+Infrastructure Playbooks           # No spaces
+eng_automation_playbooks           # Too generic (which automation?)
+App Deploy                         # No spaces
+eng-playbooks                      # Wrong separator
 ```
 
 ### Inventories
 
-```
-# Format: {Environment}
-Production
-Staging
-Development
-Test
+Inventories should clearly identify the target hosts and their scope/environment to prevent ambiguity at scale.
 
-# Or with purpose:
-Production - US East
-Development - Local
+```
+# Format: {org}_{target}_{scope}
+# All lowercase, underscores only
+# Scope = environment, region, or functional grouping
+
+eng_webservers_prod                     # Production web servers
+eng_webservers_nonprod                  # Non-production web servers
+eng_webservers_all                      # All web servers (prod + nonprod)
+plat_databases_prod_east                # Prod databases in east region
+plat_databases_prod_west                # Prod databases in west region
+ops_appservers_tier1                    # Tier 1 application servers
+ops_appservers_tier2                    # Tier 2 application servers
+sec_network_firewalls_perimeter         # Perimeter firewalls
+sec_network_switches_core               # Core network switches
+dev_containers_ocp_dev                  # OCP dev cluster containers
+
+# Target (what hosts):
+# webservers_        - Web application servers
+# databases_         - Database servers
+# appservers_        - Application servers
+# containers_        - Container platforms
+# network_           - Network equipment (prefix for sub-types)
+# linux_             - Linux systems
+# windows_           - Windows systems
+
+# Scope suffixes (required for uniqueness):
+# _prod / _nonprod / _dev / _qa    - Environment
+# _east / _west / _central         - Region
+# _tier1 / _tier2                  - Service tier
+# _all                             - All environments/regions
+# _perimeter / _core / _edge       - Network zone
+
+# Not:
+Production                         # No context
+Dev Servers                        # No spaces
+eng_webservers                     # Missing scope (which environment?)
+prod                               # Too generic
+eng-prod-servers                   # Wrong separator
 ```
 
 ### Job Templates
 
+Job templates need enough context to be unique across 100+ templates. Include what is being done, to what, and the scope.
+
 ```
-# Format: {Action} {Target} [{Environment}]
-Deploy Web Application
-Configure Web Servers
-Backup Database
-Patch Systems - Production
-Security Scan - All Hosts
+# Format: {org}_{action}_{target}_{scope}
+# All lowercase, underscores only
+# Scope = environment, frequency, or variant identifier
+
+eng_deploy_webapp_prod                  # Deploy webapp to production
+eng_deploy_webapp_staging               # Deploy webapp to staging
+eng_deploy_webapp_canary                # Canary deployment variant
+plat_configure_webservers_ssl_prod      # Configure SSL on prod web servers
+plat_configure_webservers_ssl_nonprod   # Configure SSL on non-prod
+ops_backup_database_full_daily          # Daily full database backup
+ops_backup_database_incr_hourly         # Hourly incremental backup
+ops_restore_database_prod               # Restore database in prod
+sec_scan_compliance_cis_weekly          # Weekly CIS compliance scan
+sec_scan_vulnerability_critical         # Critical vulnerability scan
+dev_validate_deployment_smoke           # Smoke test validation
+dev_validate_deployment_integration     # Integration test validation
+
+# Action prefixes:
+# deploy_      - Deploy applications/services
+# configure_   - Configure systems/services
+# backup_      - Create backups
+# restore_     - Restore from backups
+# patch_       - Apply patches/updates
+# scan_        - Run security/compliance scans
+# monitor_     - Monitoring/health checks
+# cleanup_     - Cleanup operations
+# restart_     - Service restarts
+# validate_    - Validation checks
+# provision_   - Provision new resources
+# decommission_ - Remove/decommission resources
+
+# Scope suffixes (pick what makes it unique):
+# Environment: _prod / _staging / _dev / _nonprod
+# Frequency:   _daily / _hourly / _weekly / _monthly
+# Variant:     _full / _incr / _canary / _blue / _green
+# Type:        _cis / _stig / _pci (compliance frameworks)
+#              _smoke / _integration / _e2e (test types)
 
 # Not:
-deploy-app
-config
-backup
+Deploy Web Application             # No spaces
+deploy-app                         # Wrong separator
+eng_deploy_webapp                  # Missing scope (to where? how often?)
+webapp-deploy                      # Wrong format
 ```
 
 ### Workflow Templates
 
 ```
-# Format: {Descriptive Name}
-Full Application Deployment
-Complete Infrastructure Setup
-Disaster Recovery Procedure
-Security Compliance Check
+# Format: {aap_org_abbrev}_{workflow}_{scope}_{purpose}
+# All lowercase, underscores only
+
+eng_workflow_full_deployment
+plat_workflow_infrastructure_setup
+ops_workflow_disaster_recovery
+sec_workflow_compliance_audit
+
+# Workflow prefixes:
+# workflow_  - Workflow template
+
+# Scope suffixes:
+# _full      - Complete end-to-end workflow
+# _infrastructure - Infrastructure-focused
+# _application - Application-focused
+# _security  - Security-focused
+
+# Purpose suffixes:
+# _deployment - Deployment workflows
+# _setup      - Setup/initialization
+# _recovery   - Recovery procedures
+# _audit      - Audit/compliance workflows
+# _maintenance - Maintenance workflows
 
 # Not:
-app-workflow
-infra-wf
+Full Application Deployment
+full-deployment
+eng-full-deploy-workflow
 ```
 
 ### Execution Environments
 
 ```
-# Format: {Purpose} EE
-Production EE
-Development EE
-Minimal EE
-Security Scanning EE
-Network Automation EE
+# Format: {aap_org_abbrev}_{purpose}_ee_{YY.MM.DD.PATCH}
+# All lowercase, underscores only
+
+eng_automation_ee_26.01.06.0
+plat_minimal_ee_26.01.06.0
+ops_security_scan_ee_26.01.06.0
+sec_network_automation_ee_26.01.06.0
+dev_database_admin_ee_26.01.06.0
+
+# Purpose prefixes:
+# automation_     - General automation tasks
+# minimal_        - Minimal dependencies
+# security_scan_  - Security scanning tools
+# network_automation_ - Network automation
+# database_admin_ - Database administration
+# monitoring_     - Monitoring tools
+# development_    - Development/testing tools
+
+# Tag format: YY.MM.DD.PATCH (Calendar Versioning)
+# YY - Two-digit year (26 = 2026)
+# MM - Two-digit month (01 = January)
+# DD - Two-digit day (06 = 6th)
+# PATCH - Hotfix number (0 = initial, 1+ = hotfixes)
+
+# Always include _ee_ in the middle
 
 # Not:
+Production EE
 prod-ee
-dev-ee
-ee-minimal
+eng-ee
+ee-automation
+eng_automation_ee_dev
 ```
 
 ### Schedules
 
+Schedules should reference their job template clearly and include timing context. The schedule name should make it obvious which JT it triggers.
+
 ```
-# Format: {Frequency} {Task}
-Nightly Database Backup
-Weekly System Patching
-Monthly Security Scan
-Hourly Health Check
+# Format: {org}_{freq}_{jt_action}_{jt_target}_{variant}
+# All lowercase, underscores only
+# Should mirror the JT name with frequency prepended
+
+ops_daily_backup_database_full          # Daily trigger for ops_backup_database_full_daily JT
+ops_hourly_backup_database_incr         # Hourly trigger for ops_backup_database_incr_hourly JT
+eng_nightly_deploy_webapp_staging       # Nightly staging deployment
+plat_weekly_patch_linux_nonprod         # Weekly patching for non-prod linux
+sec_weekly_scan_compliance_cis          # Weekly CIS compliance scan
+sec_monthly_scan_vulnerability_full     # Monthly full vuln scan
+dev_hourly_validate_deployment_smoke    # Hourly smoke tests
+
+# Frequency (after org, before JT reference):
+# hourly_   - Every hour
+# daily_    - Every day
+# nightly_  - Once per night (specific time)
+# weekly_   - Every week
+# monthly_  - Every month
+# quarterly_ - Every quarter
+
+# The rest should mirror the Job Template name:
+# {action}_{target}_{scope/variant}
+
+# Relationship to JT names:
+# Schedule: ops_daily_backup_database_full
+# JT:       ops_backup_database_full_daily
+#           ^^^-matches-^^^^^^^^^^^^^^^^
 
 # Not:
-backup-schedule
-patch-sched
+Nightly Database Backup            # No spaces
+backup-schedule                    # Wrong separator, too generic
+ops_daily_backup                   # Missing target details
+ops_backup_database                # Same as JT name (ambiguous)
+daily_backup                       # Missing org
 ```
 
 ---
@@ -730,28 +1031,52 @@ roles/webserver/
     index.html.j2
 ```
 
-### Complete AAP Configuration
+### Complete AAP Configuration (File Structure)
 
+```
+group_vars/all/
+├── organizations.yml          # controller_organizations_all
+├── teams.yml                  # controller_teams_all
+├── credentials.yml            # controller_credentials_all (shared)
+├── inventories.yml            # controller_inventories_all (shared)
+├── schedules.yml              # controller_schedules_all (shared)
+├── jt_eng_deploy_webapp.yml   # EE + Project + JT bundle
+└── jt_ops_backup_db_daily.yml # EE + Project + JT bundle
+```
+
+**Shared resource file (credentials.yml):**
 ```yaml
-controller_organizations:
-  - name: "Engineering"
-
-controller_teams:
-  - name: "Platform Team"
-    organization: "Engineering"
-
-controller_credentials:
-  - name: "Linux Servers"
+controller_credentials_all:
+  - name: "eng_machine_ansible_linux_prod"        # {org}_{type}_{identity}_{target}
     credential_type: "Machine"
+    organization: "engineering"
+  - name: "eng_scm_git_github_main"
+    credential_type: "Source Control"
+    organization: "engineering"
+```
 
-controller_projects:
-  - name: "Infrastructure Playbooks"
-    scm_url: "https://github.com/org/infra-playbooks.git"
+**JT bundle file (jt_eng_deploy_webapp.yml):**
+```yaml
+# EE + Project + JT versioned together
+controller_execution_environments_eng_deploy_webapp:
+  - name: "eng_automation_ee_26.01.06.0"
+    image: "quay.io/company/eng-ee@sha256:26.01.06.0"
+    credential: "eng_registry_svc_builder_quay_io"
 
-controller_templates:
-  - name: "Deploy Web Application"
-    project: "Application Deployment"
+controller_projects_eng_deploy_webapp:
+  - name: "eng_webapp_deploy_playbooks"
+    scm_url: "https://github.com/company/eng-webapp-deploy-playbooks.git"
+    credential: "eng_scm_git_github_main"
+    organization: "engineering"
+
+controller_templates_eng_deploy_webapp:
+  - name: "eng_deploy_webapp_prod"
+    project: "eng_webapp_deploy_playbooks"
+    inventory: "eng_webservers_prod"              # Defined in inventories.yml
     playbook: "deploy-webapp.yml"
+    execution_environment: "eng_automation_ee_26.01.06.0"
+    credentials:
+      - "eng_machine_ansible_linux_prod"          # Defined in credentials.yml
 ```
 
 ### Complete Kubernetes Resource
