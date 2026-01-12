@@ -381,7 +381,7 @@ git push origin main
 
 **For Dev environment**: EE is tagged `:dev` and auto-rebuilds. AAP pulls latest on each job run.
 
-**For Releases**: The release manifest will lock the specific `@sha256:...` digest.
+**For Releases**: The release manifest will lock the specific `:YY.MM.DD.PATCH` tags.
 
 📘 **More details**: [EE Versioning Strategy](./EE-VERSIONING-STRATEGY.md)
 
