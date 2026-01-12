@@ -83,7 +83,7 @@ Before diving into the workflow, understand how EEs work across environments:
 | Environment | EE Tag | Behavior |
 |-------------|--------|----------|
 | **Dev** | `:dev` or `:latest` | Auto-rebuilt on every collection/EE repo merge. Uses `pull: always` to get latest. |
-| **QA/Prod** | `@sha256:...` (digest) | Locked to exact image digest in release manifest. Immutable. |
+| **QA/Prod** | `:YY.MM.DD.PATCH` (tag) | Locked to exact image tag in release manifest. Immutable. |
 
 **Why this matters**: Collections are bundled *inside* the EE at build time. When you change a collection, you must rebuild the EE before those changes are available in AAP. In Dev, this happens automatically. For releases, the manifest locks the exact digest.
 
@@ -140,22 +140,147 @@ my_new_role_packages:
 my_new_role_config_path: /etc/httpd/conf/httpd.conf
 ```
 
+**Create/Update argument specification:**
+
+Every role must have an argument specification file for proper validation and documentation.
+
+```yaml
+# roles/my_new_role/meta/argument_specs.yml
+---
+argument_specs:
+  main:
+    short_description: Install and configure my new role
+    description:
+      - This role installs and configures my new application/service
+    author: Your Name (@your_username)
+    options:
+      my_new_role_packages:
+        type: list
+        elements: str
+        required: false
+        default: ["httpd"]
+        description: List of packages to install
+
+      my_new_role_config_path:
+        type: str
+        required: false
+        default: "/etc/httpd/conf/httpd.conf"
+        description: Path to the configuration file
+
+      my_new_role_enabled:
+        type: bool
+        required: false
+        default: true
+        description: Whether to enable and start the service
+```
+
+```bash
+# Validate the argument spec
+ansible-playbook --check -i localhost, --connection=local \
+  -e "my_new_role_packages=['nginx']" \
+  roles/my_new_role/tasks/main.yml
+```
+
 📘 **More details**: [Ansible Best Practices](./ANSIBLE-BEST-PRACTICES.md) | [Code Style Guide](./CODE-STYLE-GUIDE.md) | [Naming Conventions](./NAMING-CONVENTIONS.md)
 
 ---
 
-### Step 2: Lint Your Content
+### Step 2: Create Molecule Tests
 
-Lint immediately after writing code—catch issues early before writing tests.
+Every role needs Molecule tests. Use the modern approach of centralized molecule scenarios in `extensions/molecule/` rather than role-specific test directories.
 
 ```bash
 cd automation-collection-example
 
-# Run ansible-lint on your new role
-ansible-lint roles/my_new_role
+# Create a new molecule scenario for your role
+molecule init scenario db_server --driver-name=docker
 
-# Run yamllint for YAML syntax
-yamllint roles/my_new_role
+# This creates scenario files in: extensions/molecule/db_server/
+```
+
+**Configure the scenario:**
+
+```yaml
+# extensions/molecule/db_server/molecule.yml
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: instance
+    image: quay.io/centos/centos:stream9
+    pre_build_image: true
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      all:
+        database_name: testdb
+        database_user: testuser
+verifier:
+  name: ansible
+```
+
+**Write convergence tests:**
+
+```yaml
+# extensions/molecule/db_server/converge.yml
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: Include database role
+      ansible.builtin.include_role:
+        name: myorg.custom_collection.database
+```
+
+**Write verification tests:**
+
+```yaml
+# extensions/molecule/db_server/verify.yml
+---
+- name: Verify
+  hosts: all
+  tasks:
+    - name: Check PostgreSQL service is running
+      ansible.builtin.service_facts:
+
+    - name: Assert PostgreSQL is active
+      ansible.builtin.assert:
+        that: ansible_facts.services['postgresql.service'].state == 'running'
+
+    - name: Verify database exists
+      community.postgresql.postgresql_db:
+        name: "{{ database_name }}"
+        state: present
+      check_mode: true
+      register: db_check
+
+    - name: Assert database was created
+      ansible.builtin.assert:
+        that: not db_check.changed
+```
+
+**Benefits of centralized molecule scenarios:**
+- All test scenarios in one place for easy management
+- Shared configurations across role tests
+- Better separation of concerns
+- Easier CI/CD integration
+
+📘 **More details**: [Testing Guide](./TESTING-GUIDE.md)
+
+---
+
+### Step 3: Lint Test Files
+
+Lint your role and Molecule test files—catch issues before running tests.
+
+```bash
+cd automation-collection-example
+
+# Lint the collection
+ansible-lint
 
 # Fix any issues before proceeding to tests
 ```
@@ -165,84 +290,48 @@ yamllint roles/my_new_role
 - Incorrect indentation
 - Missing `name` on tasks
 - Deprecated modules
+- Test file quality issues
+
+**Ensure both your role and tests follow the same quality standards.**
 
 📘 **More details**: [Pre-commit Guide](./PRE-COMMIT-GUIDE.md) | [Code Style Guide](./CODE-STYLE-GUIDE.md)
 
 ---
 
-### Step 3: Create Molecule Tests
+### Step 4: Run Molecule Tests
 
-Every role needs Molecule tests. Write tests for your role.
-
-```yaml
-# roles/my_new_role/molecule/default/converge.yml
----
-- name: Converge
-  hosts: all
-  tasks:
-    - name: Include my_new_role
-      ansible.builtin.include_role:
-        name: my_new_role
-```
-
-```yaml
-# roles/my_new_role/molecule/default/verify.yml
----
-- name: Verify
-  hosts: all
-  tasks:
-    - name: Check service is running
-      ansible.builtin.service_facts:
-
-    - name: Assert service is active
-      ansible.builtin.assert:
-        that: ansible_facts.services['httpd.service'].state == 'running'
-```
-
-📘 **More details**: [Testing Guide](./TESTING-GUIDE.md)
-
----
-
-### Step 4: Lint Test Files
-
-Lint your Molecule test files—tests are code too.
+Execute Molecule tests to verify your role works correctly using the centralized scenarios.
 
 ```bash
 cd automation-collection-example
 
-# Lint the molecule test playbooks
-ansible-lint roles/my_new_role/molecule/
-
-# Lint YAML syntax
-yamllint roles/my_new_role/molecule/
-```
-
-**Ensure tests follow the same quality standards as the role itself.**
-
----
-
-### Step 5: Run Molecule Tests
-
-Execute Molecule tests to verify your role works correctly.
-
-```bash
-cd roles/my_new_role
-molecule test
+# Run tests for your specific scenario
+molecule test -s db_server
 
 # Or step-by-step for debugging:
-molecule create    # Spin up test container
-molecule converge  # Run the role
-molecule verify    # Run verification tests
-molecule destroy   # Clean up
+molecule create -s db_server    # Spin up test container
+molecule converge -s db_server  # Run the role
+molecule verify -s db_server    # Run verification tests
+molecule destroy -s db_server   # Clean up
+
+# List all available scenarios
+molecule list
 ```
 
 **All tests must pass before proceeding.**
+
+**Available molecule commands:**
+- `molecule test -s <scenario>` - Run full test cycle
+- `molecule converge -s <scenario>` - Apply role only
+- `molecule verify -s <scenario>` - Run verification only
+- `molecule login -s <scenario>` - SSH into test container
+- `molecule reset -s <scenario>` - Reset scenario state
 
 📘 **More details**: [Testing Guide](./TESTING-GUIDE.md)
 
 ---
 
-### Step 6: Final Quality Gate - Lint & Scan All
+### Step 5: Final Quality Gate - Lint & Scan All
 
 Run comprehensive linting and security scanning on the entire codebase.
 
@@ -268,7 +357,7 @@ pre-commit run --all-files
 
 ---
 
-### Step 7: Update Execution Environment
+### Step 6: Update Execution Environment
 
 Since collections are bundled *inside* the EE, you must rebuild it after collection changes.
 
@@ -302,7 +391,7 @@ git push origin main
 
 ---
 
-### Step 8: Create or Update Playbook
+### Step 7: Create or Update Playbook
 
 If you need a new playbook to orchestrate your role, create it in `automation-playbooks`.
 
@@ -349,7 +438,7 @@ pre-commit run --all-files
 
 ---
 
-### Step 9: Configure AAP Resources (Config as Code)
+### Step 8: Configure AAP Resources (Config as Code)
 
 Now that you have the playbook, configure AAP to use it along with the rebuilt EE.
 
@@ -411,7 +500,7 @@ controller_job_templates:
 
 ---
 
-### Step 10: Create Pull Requests
+### Step 9: Create Pull Requests
 
 Push changes to all modified repositories and create PRs. CI runs automatically.
 
@@ -435,7 +524,7 @@ gh pr create --title "Add my_new_role" --body "Adds deployment automation for XY
 
 ---
 
-### Step 11: Merge to Main → Auto-Deploy to Dev
+### Step 10: Merge to Main → Auto-Deploy to Dev
 
 After PR approvals and merges, changes automatically deploy to the Dev environment.
 
@@ -460,7 +549,7 @@ The inner loop is fast—typically under 5 minutes from final merge to full depl
 
 ---
 
-### Step 12: Test in Dev Environment
+### Step 11: Test in Dev Environment
 
 Validate your automation works in the Dev AAP instance.
 
@@ -484,7 +573,7 @@ awx job_templates launch "Deploy My App" --extra_vars '{"app_name": "test"}'
 
 ---
 
-### Step 13: Create Release Manifest for QA
+### Step 12: Create Release Manifest for QA
 
 When Dev testing passes, create a release manifest that locks all component versions.
 
@@ -515,7 +604,7 @@ components:
 
 ---
 
-### Step 14: Promote to QA
+### Step 13: Promote to QA
 
 Tag and push to trigger promotion to QA.
 
@@ -547,7 +636,7 @@ git push origin main --tags
 
 ---
 
-### Step 15: Promote to Production
+### Step 14: Promote to Production
 
 After QA validation, promote to production with manual approval.
 
