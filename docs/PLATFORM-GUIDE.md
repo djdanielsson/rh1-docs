@@ -489,7 +489,7 @@ controller_templates_plat_configure_database:
     playbook: "playbooks/configure-database.yml" # → Playbook you created
     execution_environment: "plat_database_admin_ee_26.01.06.0" # → Defined above
     credentials:
-      - "plat_machine_ansible_linux_prod"      # → Defined in credentials.yml
+      - "plat_machine_svc_ansible_linux"      # → Defined in credentials.yml
     organization: "platform"
     ask_variables_on_launch: true
     extra_vars: |
@@ -508,7 +508,7 @@ Ensure the shared resources your JT references are defined in their respective f
 ```yaml
 # credentials.yml - Machine and source control credentials
 controller_credentials_all:
-  - name: "plat_machine_ansible_linux_prod"    # Referenced in JT
+  - name: "plat_machine_svc_ansible_linux"    # Referenced in JT
   - name: "plat_scm_git_github_main"          # Referenced in project
 
 # inventories.yml - Target inventories
@@ -618,7 +618,7 @@ components:
     repository: "https://github.com/djdanielsson/rh1-aap-config-as-code.git"
     ref: "abc123def456..."  # Exact Git SHA from dev
   execution_environment:
-    repository: "https://github.com/djdanielsson/rh1-custom-ee.git"
+    repository: "https://github.com/djdanielsson/rh1-ee.git"
     ref: "789ghi012jkl..."
     image: "quay.io/org/custom-ee@sha256:..."  # Exact image digest (not :dev tag!)
   playbooks:

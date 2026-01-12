@@ -106,7 +106,7 @@ graph TD
 
     %% EE subtree
     subgraph EE_SUB["Execution Environment Details"]
-        EE_REPO[EE Repository<br/>rh1-custom-ee]:::repo
+        EE_REPO[EE Repository<br/>rh1-ee]:::repo
         EXEC_ENV[execution-environment.yml]:::config
         PY_REQS[Python Requirements<br/>requirements.txt]:::deps
         COLL_REQS[Collection Requirements<br/>requirements.yml]:::deps

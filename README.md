@@ -82,7 +82,7 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 - **[View README](./automation-collection-example/README.md)**
 
 ### 5. automation-ee-example (Execution Environment)
-- **Repository**: https://github.com/djdanielsson/rh1-custom-ee.git
+- **Repository**: https://github.com/djdanielsson/rh1-ee.git
 - **Purpose**: Custom Execution Environment container image
 - **Contents**: execution-environment.yml, requirements.yml/txt, bindep.txt
 - **Built with**: ansible-builder

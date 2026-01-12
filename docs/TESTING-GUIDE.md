@@ -210,7 +210,7 @@ detect-secrets scan
 bandit -r plugins/
 
 # Image scanning
-trivy image quay.io/myorg/custom-ee:latest
+trivy image quay.io/myorg/rh1-ee:latest
 ```
 
 ### 7. Validation Tests
