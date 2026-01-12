@@ -193,7 +193,7 @@ Every role needs Molecule tests. Use the modern approach of centralized molecule
 cd automation-collection-example
 
 # Create a new molecule scenario for your role
-molecule init scenario db_server --driver-name=docker
+molecule init scenario db_server
 
 # This creates scenario files in: extensions/molecule/db_server/
 ```
@@ -206,7 +206,7 @@ molecule init scenario db_server --driver-name=docker
 dependency:
   name: galaxy
 driver:
-  name: docker
+  name: podman
 platforms:
   - name: instance
     image: quay.io/centos/centos:stream9
@@ -338,17 +338,13 @@ Run comprehensive linting and security scanning on the entire codebase.
 ```bash
 cd automation-collection-example
 
-# Run all pre-commit hooks (lint, format, scan)
+# Run pre-commit hooks (primarily secret scanning)
 pre-commit run --all-files
 
-# This runs:
-# - ansible-lint (entire collection)
-# - yamllint
-# - check-yaml
-# - end-of-file-fixer
-# - trailing-whitespace
-# - detect-secrets
-# - check-executables-have-shebangs
+# Pre-commit only runs:
+# - detect-secrets (secret leak detection)
+#
+# Note: Other checks (linting, formatting, etc.) are handled by GitHub Actions or run manually
 ```
 
 **Pre-commit hooks run automatically on commit**, but running manually ensures clean commits.
@@ -427,11 +423,11 @@ vi playbooks/deploy-myapp.yml
         status_code: 200
 ```
 
-**Lint the playbook:**
+**Lint and scan the playbook:**
 
 ```bash
 ansible-lint playbooks/deploy-myapp.yml
-pre-commit run --all-files
+pre-commit run --all-files  # Secret scanning
 ```
 
 📘 **More details**: [automation-playbooks README](../automation-playbooks/README.md)
@@ -440,58 +436,93 @@ pre-commit run --all-files
 
 ### Step 8: Configure AAP Resources (Config as Code)
 
-Now that you have the playbook, configure AAP to use it along with the rebuilt EE.
+Now that you have the playbook, create a Job Template bundle file that defines the EE, Project, and JT together.
 
 ```bash
-cd aap-config-as-code
+cd aap-config-as-code/inventory/group_vars/all
+
+# Create a new JT bundle file for your role
+# File naming: jt_{org}_{action}_{target}.yml
+# Example: jt_plat_configure_database.yml
 ```
 
-**1. Verify Execution Environment is configured:**
+**Create Job Template Bundle File:**
 
 ```yaml
-# inventory/group_vars/aap_dev/execution_environments.yml
-controller_execution_environments:
-  - name: "eng_automation_ee_26.01.06.0"
-    description: "Custom Execution Environment with org collections"
-    image: "quay.io/company/custom-ee:dev"  # :dev tag auto-updates
-    pull: "always"  # Always pull latest for dev
-    credential: "eng_registry_quay_io"
-```
+# jt_plat_configure_database.yml
+---
+# Platform organization PostgreSQL database configuration
+# Contains only tightly coupled resources: EE + Project + JT
+# Shared resources (credentials, inventories) are in their respective files
+#
+# Variable suffix: _plat_configure_database (includes org for uniqueness)
 
-**2. Configure Project (if new playbook repo needed):**
+# Execution Environment for Platform Database Configuration
+controller_execution_environments_plat_configure_database:
+  - name: "plat_database_admin_ee_26.01.06.0"
+    description: "Platform database administration execution environment"
+    image: "quay.io/company/plat-ee@sha256:26.01.06.0"
+    pull: "missing"
+    credential: "plat_registry_svc_builder_quay_io"
 
-```yaml
-# inventory/group_vars/aap_dev/projects.yml
-controller_projects:
-  - name: "eng_automation_playbooks"
-    description: "Centralized automation playbooks"
+# Project for Platform Database Configuration
+controller_projects_plat_configure_database:
+  - name: "plat_database_config_playbooks"
+    description: "Platform database configuration playbooks"
     scm_type: git
-    scm_url: https://github.com/company/automation-playbooks.git
+    scm_url: "https://github.com/company/automation-playbooks.git"
     scm_branch: main
-    credential: "eng_source_control_github_main"
+    scm_clean: true
+    scm_delete_on_update: true
+    credential: "plat_scm_git_github_main"
+    timeout: 0
+    organization: "platform"
+
+# Job Template for Platform Database Configuration
+# References shared resources from credentials.yml and inventories.yml
+controller_templates_plat_configure_database:
+  - name: "plat_configure_database_prod"
+    description: "Configure PostgreSQL database on production servers"
+    job_type: "run"
+    inventory: "plat_databases_prod"           # → Defined in inventories.yml
+    project: "plat_database_config_playbooks"  # → Defined above
+    playbook: "playbooks/configure-database.yml" # → Playbook you created
+    execution_environment: "plat_database_admin_ee_26.01.06.0" # → Defined above
+    credentials:
+      - "plat_machine_ansible_linux_prod"      # → Defined in credentials.yml
+    organization: "platform"
+    ask_variables_on_launch: true
+    extra_vars: |
+      ---
+      database_name: "appdb"
+      database_user: "app_user"
+      database_port: 5432
+      database_configure_firewall: true
+...
 ```
 
-**3. Add Job Template for your new automation:**
+**Verify Shared Resources Exist:**
+
+Ensure the shared resources your JT references are defined in their respective files:
 
 ```yaml
-# inventory/group_vars/aap_dev/job_templates.yml
-controller_job_templates:
-  - name: "eng_deploy_webapp_main"
-    description: "Deploy my application using my_new_role"
-    job_type: run
-    organization: Default
-    inventory: "eng_webservers"
-    project: "eng_automation_playbooks"        # → References playbooks repo
-    playbook: "playbooks/deploy-myapp.yml"     # → Playbook you just created
-    execution_environment: "eng_automation_ee_26.01.06.0" # → EE rebuilt with your collection
-    credentials:
-      - "eng_machine_linux_servers"
-    ask_variables_on_launch: true
-    extra_vars:
-      app_name: "myapp"
+# credentials.yml - Machine and source control credentials
+controller_credentials_all:
+  - name: "plat_machine_ansible_linux_prod"    # Referenced in JT
+  - name: "plat_scm_git_github_main"          # Referenced in project
+
+# inventories.yml - Target inventories
+controller_inventories_all:
+  - name: "plat_databases_prod"               # Referenced in JT
 ```
 
-**Dependency chain:**
+**JT Bundle Structure:**
+- **EE**: Tightly coupled with the collection version
+- **Project**: Points to the playbook repository
+- **JT**: References shared resources and defines execution parameters
+- **Variable Suffix**: `{org}_{action}_{target}` for uniqueness
+
+**Dependency Chain:**
 - **Job Template** references **Project** (playbooks) + **Execution Environment**
 - **Playbook** calls **Roles** from collections (bundled in EE)
 - **EE** contains collections + Python packages + system deps
@@ -638,22 +669,23 @@ git push origin main --tags
 
 ### Step 14: Promote to Production
 
-After QA validation, promote to production with manual approval.
+After QA validation, production promotion is handled automatically through the release pipeline with required approvals.
 
-```bash
-# Trigger production promotion via Tekton
-tkn pipeline start promote \
-  -p VERSION=26.01.06.0 \
-  -p FROM_ENVIRONMENT=qa \
-  -p TO_ENVIRONMENT=prod
+**Pipeline Process:**
+1. **Automatic Trigger**: Release pipeline detects successful QA deployment
+2. **Approval Gate**: Requires manual approval from release managers
+3. **Automated Promotion**: Pipeline promotes the same release manifest to production
+4. **Verification**: Production deployment validated automatically
 
-# Or via GitHub Actions workflow with approval gate
-```
+**Approval Requirements:**
+- ✅ QA validation complete and signed off
+- ✅ Change management approval obtained
+- ✅ Production backup verification
+- ✅ Security team review (if applicable)
 
-Production deployments require:
-- ✅ QA sign-off
-- ✅ Change management approval
-- ✅ Backup verification
+**No Manual CLI Commands**: Production promotion is fully automated through the CI/CD pipeline to ensure consistency and auditability.
+
+**Monitoring**: Track promotion progress through the pipeline dashboard or release manifest updates.
 
 📘 **More details**: [Disaster Recovery](./DISASTER-RECOVERY.md) | [Security Guide](./SECURITY-GUIDE.md)
 
@@ -661,19 +693,21 @@ Production deployments require:
 
 ### Rollback (if needed)
 
-Rollback to any previous release by re-promoting that version.
+Rollback to any previous release through the pipeline system.
 
-```bash
-# Option A: Re-promote previous tag
-tkn pipeline start promote \
-  -p VERSION=26.01.05.0 \
-  -p FROM_ENVIRONMENT=prod \
-  -p TO_ENVIRONMENT=prod
+**Pipeline Rollback Process:**
+1. **Select Previous Release**: Choose a stable release tag from the release manifest history
+2. **Pipeline Trigger**: Initiate rollback through the pipeline interface (not CLI)
+3. **Automated Rollback**: Pipeline promotes the previous release manifest to production
+4. **Verification**: Automated validation ensures rollback success
 
-# Option B: Create new manifest pointing to old commits
-```
+**Key Benefits:**
+- **Atomic Rollback**: Release manifest ensures ALL components rollback together
+- **Auditable**: Full traceability through pipeline logs
+- **Safe**: Same approval gates and validation as regular deployments
+- **Fast**: Automated process reduces recovery time
 
-The release manifest ensures you roll back **all components together**.
+**Emergency Rollback**: For critical issues, rollback can be fast-tracked with emergency approval.
 
 📘 **More details**: [Troubleshooting Guide](./TROUBLESHOOTING-GUIDE.md)
 
@@ -766,7 +800,7 @@ ansible-lint
 # Install pre-commit hooks
 pre-commit install
 
-# Run all pre-commit checks
+# Run pre-commit checks (secret scanning only)
 pre-commit run --all-files
 
 # Create release
