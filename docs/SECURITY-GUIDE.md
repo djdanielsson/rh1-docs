@@ -92,8 +92,8 @@ EOF
 # All changes tracked in Git
 git log --all --oneline
 
-# Who created release 26.01.06.0?
-git log --all --grep="26.01.06.0"
+# Who created release 26.01.06-0?
+git log --all --grep="26.01.06-0"
 
 # What changed in prod AAP config?
 git log -- group_vars/aap_prod.yml
@@ -228,7 +228,7 @@ echo "📊 Generating compliance report..."
 cat > compliance_report_$(date +%Y%m%d).json << EOF
 {
   "report_date": "$(date -Iseconds)",
-  "platform_version": "26.01.06.0",
+  "platform_version": "26.01.06-0",
   "compliance_checks": {
     "secrets_in_git": "PASS",
     "rbac_validation": "PASS",

@@ -652,7 +652,7 @@ Merge:
 1. Ensure all tests pass on main
 2. Update version in metadata files
 3. Update CHANGELOG
-4. Create release tag (25.01.05.0)
+4. Create release tag (25.01.05-0)
 5. CI builds and publishes
 6. Create release manifest
 7. Promote to QA

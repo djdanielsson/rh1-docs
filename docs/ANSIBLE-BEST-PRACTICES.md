@@ -277,7 +277,7 @@ spec:
     - name: environment
       description: "Target environment (dev, qa, prod)"
     - name: git-revision
-      description: "Git tag to apply (e.g., 25.01.05.0)"
+      description: "Git tag to apply (e.g., 25.01.05-0)"
 
   tasks:
     - name: git-clone
@@ -444,7 +444,7 @@ controller_templates:
     inventory: "QA Infrastructure"
     project: "App Playbooks"
     playbook: "deploy.yml"
-    execution_environment: "App EE - 25.01.05.0"
+    execution_environment: "App EE - 25.01.05-0"
     credentials:
       - "QA SSH Key"
 ```

@@ -512,7 +512,7 @@ group_vars/all/
 # Variable naming: controller_{resource_type}_{org}_{jt_suffix}
 # The suffix MUST include org abbreviation to guarantee uniqueness
 controller_execution_environments_eng_deploy_webapp:
-  - name: "eng_automation_ee_26.01.06.0"
+  - name: "eng_automation_ee_26.01.06-0"
     ...
 
 controller_projects_eng_deploy_webapp:
@@ -678,18 +678,17 @@ Inventories should clearly identify the target hosts and their scope/environment
 ```
 # Format: {org}_{target}_{scope}
 # All lowercase, underscores only
-# Scope = environment, region, or functional grouping
+# Scope = functional grouping, region, or organizational separation
 
-eng_webservers_prod                     # Production web servers
-eng_webservers_nonprod                  # Non-production web servers
-eng_webservers_all                      # All web servers (prod + nonprod)
-plat_databases_prod_east                # Prod databases in east region
-plat_databases_prod_west                # Prod databases in west region
-ops_appservers_tier1                    # Tier 1 application servers
-ops_appservers_tier2                    # Tier 2 application servers
-sec_network_firewalls_perimeter         # Perimeter firewalls
-sec_network_switches_core               # Core network switches
-dev_containers_ocp_dev                  # OCP dev cluster containers
+eng_webservers_app                     # Application web servers
+eng_webservers_api                     # API web servers
+plat_databases_primary                 # Primary database servers
+plat_databases_replica                 # Replica database servers
+ops_appservers_tier1                   # Tier 1 application servers
+ops_appservers_tier2                   # Tier 2 application servers
+sec_network_firewalls_perimeter        # Perimeter firewalls
+sec_network_switches_core              # Core network switches
+dev_containers_ocp_cluster             # OCP cluster containers
 
 # Target (what hosts):
 # webservers_        - Web application servers
@@ -700,12 +699,12 @@ dev_containers_ocp_dev                  # OCP dev cluster containers
 # linux_             - Linux systems
 # windows_           - Windows systems
 
-# Scope suffixes (required for uniqueness):
-# _prod / _nonprod / _dev / _qa    - Environment
-# _east / _west / _central         - Region
-# _tier1 / _tier2                  - Service tier
-# _all                             - All environments/regions
-# _perimeter / _core / _edge       - Network zone
+# Scope suffixes (for functional separation):
+# _app / _api / _web                  - Application components
+# _primary / _replica / _backup       - Database roles
+# _tier1 / _tier2 / _tier3            - Service tiers
+# _perimeter / _core / _edge          - Network zones
+# _cluster / _node / _master          - Infrastructure roles
 
 # Not:
 Production                         # No context
@@ -722,20 +721,19 @@ Job templates need enough context to be unique across 100+ templates. Include wh
 ```
 # Format: {org}_{action}_{target}_{scope}
 # All lowercase, underscores only
-# Scope = environment, frequency, or variant identifier
+# Scope = frequency, functional variant, or operational context
 
-eng_deploy_webapp_prod                  # Deploy webapp to production
-eng_deploy_webapp_staging               # Deploy webapp to staging
 eng_deploy_webapp_canary                # Canary deployment variant
-plat_configure_webservers_ssl_prod      # Configure SSL on prod web servers
-plat_configure_webservers_ssl_nonprod   # Configure SSL on non-prod
+plat_configure_webservers_ssl           # Configure SSL on web servers
 ops_backup_database_full_daily          # Daily full database backup
 ops_backup_database_incr_hourly         # Hourly incremental backup
-ops_restore_database_prod               # Restore database in prod
+ops_restore_database_primary            # Restore primary database
 sec_scan_compliance_cis_weekly          # Weekly CIS compliance scan
 sec_scan_vulnerability_critical         # Critical vulnerability scan
 dev_validate_deployment_smoke           # Smoke test validation
 dev_validate_deployment_integration     # Integration test validation
+plat_patch_systems_security_monthly     # Monthly security patching
+plat_monitor_services_health            # Health monitoring for services
 
 # Action prefixes:
 # deploy_      - Deploy applications/services
@@ -752,11 +750,12 @@ dev_validate_deployment_integration     # Integration test validation
 # decommission_ - Remove/decommission resources
 
 # Scope suffixes (pick what makes it unique):
-# Environment: _prod / _staging / _dev / _nonprod
 # Frequency:   _daily / _hourly / _weekly / _monthly
 # Variant:     _full / _incr / _canary / _blue / _green
+# Role:        _primary / _replica / _master / _worker
 # Type:        _cis / _stig / _pci (compliance frameworks)
 #              _smoke / _integration / _e2e (test types)
+# Function:    _health / _performance / _security
 
 # Not:
 Deploy Web Application             # No spaces
@@ -801,14 +800,14 @@ eng-full-deploy-workflow
 ### Execution Environments
 
 ```
-# Format: {aap_org_abbrev}_{purpose}_ee_{YY.MM.DD.PATCH}
+# Format: {aap_org_abbrev}_{purpose}_ee_{YY.MM.DD-PATCH}
 # All lowercase, underscores only
 
-eng_automation_ee_26.01.06.0
-plat_minimal_ee_26.01.06.0
-ops_security_scan_ee_26.01.06.0
-sec_network_automation_ee_26.01.06.0
-dev_database_admin_ee_26.01.06.0
+eng_automation_ee_26.01.06-0
+plat_minimal_ee_26.01.06-0
+ops_security_scan_ee_26.01.06-0
+sec_network_automation_ee_26.01.06-0
+dev_database_admin_ee_26.01.06-0
 
 # Purpose prefixes:
 # automation_     - General automation tasks
@@ -819,7 +818,7 @@ dev_database_admin_ee_26.01.06.0
 # monitoring_     - Monitoring tools
 # development_    - Development/testing tools
 
-# Tag format: YY.MM.DD.PATCH (Calendar Versioning)
+# Tag format: YY.MM.DD-PATCH (Calendar Versioning)
 # YY - Two-digit year (26 = 2026)
 # MM - Two-digit month (01 = January)
 # DD - Two-digit day (06 = 6th)
@@ -846,8 +845,8 @@ Schedules should reference their job template clearly and include timing context
 
 ops_daily_backup_database_full          # Daily trigger for ops_backup_database_full_daily JT
 ops_hourly_backup_database_incr         # Hourly trigger for ops_backup_database_incr_hourly JT
-eng_nightly_deploy_webapp_staging       # Nightly staging deployment
-plat_weekly_patch_linux_nonprod         # Weekly patching for non-prod linux
+eng_nightly_deploy_webapp_canary        # Nightly canary deployment
+plat_weekly_patch_linux_systems         # Weekly patching for linux systems
 sec_weekly_scan_compliance_cis          # Weekly CIS compliance scan
 sec_monthly_scan_vulnerability_full     # Monthly full vuln scan
 dev_hourly_validate_deployment_smoke    # Hourly smoke tests
@@ -904,7 +903,7 @@ bugfix/ee-build-failure
 # Hotfixes (emergency production fixes)
 hotfix/security-patch
 hotfix/critical-bug
-release/25.01.05.0
+release/25.01.05-0
 
 # Not:
 new-feature
@@ -948,7 +947,7 @@ perf:     Performance improvement
 
 ### Git Tags
 
-**CalVer Format** (YY.MM.DD.PATCH):
+**CalVer Format** (YY.MM.DD-PATCH):
 
 This platform uses **Calendar Versioning** with a single tag promoted across all environments.
 
@@ -961,18 +960,18 @@ This platform uses **Calendar Versioning** with a single tag promoted across all
 
 **Tag Examples**:
 ```bash
-# Format: YY.MM.DD.PATCH
-26.01.06.0    # January 6, 2026 - Initial release
-26.01.06.1    # January 6, 2026 - Hotfix
-26.01.07.0    # January 7, 2026 - New release
-26.02.15.0    # February 15, 2026
+# Format: YY.MM.DD-PATCH
+26.01.06-0    # January 6, 2026 - Initial release
+26.01.06-1    # January 6, 2026 - Hotfix
+26.01.07-0    # January 7, 2026 - New release
+26.02.15-0    # February 15, 2026
 
 # Same tag promotes through all environments:
 # dev → qa → prod (tracked via release manifest)
 
 # Not:
 1.0.0         # Wrong format (SemVer)
-v26.01.06.0   # Wrong format (version prefix)
+v26.01.06-0   # Wrong format (version prefix)
 latest        # Not immutable
 26.1.6.0      # Missing leading zeros
 ```
@@ -980,7 +979,7 @@ latest        # Not immutable
 **Tag Message Guidelines**:
 ```bash
 # Good - Detailed tag message
-git tag -a 25.01.05.0 -m "Release January 5, 2025
+git tag -a 25.01.05-0 -m "Release January 5, 2025
 
 Features:
 - Add webserver role with HA support
@@ -992,7 +991,7 @@ Testing:
 - Integration tests successful
 - Security scan clean
 
-Rollback: Revert to 25.01.04.0"
+Rollback: Revert to 25.01.04-0"
 ```
 
 **Tag Immutability Rules**:
@@ -1000,7 +999,7 @@ Rollback: Revert to 25.01.04.0"
 - ❌ **NEVER** delete or move tags
 - ❌ **NEVER** force-push tags: `git push --force origin <tag>`
 - ❌ **NEVER** reuse tag names on different commits
-- ✅ For hotfixes, increment PATCH: `25.01.05.1`
+- ✅ For hotfixes, increment PATCH: `25.01.05-1`
 
 **See**: [GIT-WORKFLOW.md](./GIT-WORKFLOW.md) for complete workflow
 
@@ -1047,10 +1046,10 @@ group_vars/all/
 **Shared resource file (credentials.yml):**
 ```yaml
 controller_credentials_all:
-  - name: "eng_machine_ansible_linux_prod"        # {org}_{type}_{identity}_{target}
+  - name: "eng_machine_ansible_linux"             # {org}_{type}_{identity}_{target}
     credential_type: "Machine"
     organization: "engineering"
-  - name: "eng_scm_git_github_main"
+  - name: "eng_scm_git_github"
     credential_type: "Source Control"
     organization: "engineering"
 ```
@@ -1059,8 +1058,8 @@ controller_credentials_all:
 ```yaml
 # EE + Project + JT versioned together
 controller_execution_environments_eng_deploy_webapp:
-  - name: "eng_automation_ee_26.01.06.0"
-    image: "quay.io/company/eng-ee@sha256:26.01.06.0"
+  - name: "eng_automation_ee_26.01.06-0"
+    image: "quay.io/company/eng-ee@sha256:26.01.06-0"
     credential: "eng_registry_svc_builder_quay_io"
 
 controller_projects_eng_deploy_webapp:
@@ -1070,13 +1069,13 @@ controller_projects_eng_deploy_webapp:
     organization: "engineering"
 
 controller_templates_eng_deploy_webapp:
-  - name: "eng_deploy_webapp_prod"
+  - name: "eng_deploy_webapp_canary"
     project: "eng_webapp_deploy_playbooks"
-    inventory: "eng_webservers_prod"              # Defined in inventories.yml
+    inventory: "eng_webservers_app"               # Defined in inventories.yml
     playbook: "deploy-webapp.yml"
-    execution_environment: "eng_automation_ee_26.01.06.0"
+    execution_environment: "eng_automation_ee_26.01.06-0"
     credentials:
-      - "eng_machine_ansible_linux_prod"          # Defined in credentials.yml
+      - "eng_machine_ansible_linux"               # Defined in credentials.yml
 ```
 
 ### Complete Kubernetes Resource

@@ -272,7 +272,7 @@ podman inspect quay.io/org/image:tag --format='{{.Digest}}'
 # Validate manifest structure
 python3 -c "
 import yaml
-m = yaml.safe_load(open('releases/release-25.01.05.0.yaml'))
+m = yaml.safe_load(open('releases/release-25.01.05-0.yaml'))
 assert 'version' in m
 assert 'components' in m
 "

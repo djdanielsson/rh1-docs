@@ -15,7 +15,7 @@ This diagram shows the complete dependency tree that gets version-locked in each
 ```mermaid
 graph TD
     %% Top Level: Release Manifest
-    RM[Release Manifest<br/>26.01.06.0]:::manifest
+    RM[Release Manifest<br/>26.01.06-0]:::manifest
 
     %% Main Components - arrange horizontally
     subgraph MAIN[" "]
@@ -213,7 +213,7 @@ graph TD
 
 | Component | Versioned How | Updated When |
 |-----------|---------------|--------------|
-| **Release Manifest** | CalVer (YY.MM.DD.PATCH) | Each promotion |
+| **Release Manifest** | CalVer (YY.MM.DD-PATCH) | Each promotion |
 | **Git Repositories** | SHA commit hash | Code changes |
 | **Container Images** | SHA256 digest | EE rebuilds |
 | **Ansible Collections** | Semantic version ranges | Dependency updates |
@@ -304,7 +304,7 @@ When promoting a release:
 | **Source Code** | Collections, Playbooks, AAP config, EE definition | Git SHA |
 | **Built Artifacts** | Container images | SHA256 digest |
 | **Dependencies** | Collections, Python packages | Version constraints |
-| **Metadata** | Release manifest itself | CalVer YY.MM.DD.PATCH |
+| **Metadata** | Release manifest itself | CalVer YY.MM.DD-PATCH |
 
 ### Dependency Update Process
 

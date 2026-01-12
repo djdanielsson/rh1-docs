@@ -9,7 +9,7 @@
 
 ## Overview
 
-This platform uses **Trunk-Based Development** with **CalVer (YY.MM.DD.PATCH)** tags for release management. This approach provides:
+This platform uses **Trunk-Based Development** with **CalVer (YY.MM.DD-PATCH)** tags for release management. This approach provides:
 
 - ✅ **Single source of truth** - One `main` branch, no environment branches
 - ✅ **Instant date visibility** - Know exactly when something was released
@@ -23,7 +23,7 @@ This platform uses **Trunk-Based Development** with **CalVer (YY.MM.DD.PATCH)** 
 ## Version Format
 
 ```
-YY.MM.DD.PATCH
+YY.MM.DD-PATCH
 ```
 
 | Component | Description | Values | Example |
@@ -36,21 +36,21 @@ YY.MM.DD.PATCH
 ### Examples
 
 ```
-26.01.06.0    # January 6, 2026 - Initial release
-26.01.06.1    # January 6, 2026 - Hotfix 1
-26.01.06.2    # January 6, 2026 - Hotfix 2
-26.01.07.0    # January 7, 2026 - New release
-26.02.15.0    # February 15, 2026 - New release
+26.01.06-0    # January 6, 2026 - Initial release
+26.01.06-1    # January 6, 2026 - Hotfix 1
+26.01.06-2    # January 6, 2026 - Hotfix 2
+26.01.07-0    # January 7, 2026 - New release
+26.02.15-0    # February 15, 2026 - New release
 ```
 
 ### Version Rules
 
 | Scenario | Action | Example |
 |----------|--------|---------|
-| New release | Use today's date, PATCH=0 | `26.01.06.0` |
-| Same-day hotfix | Increment PATCH | `26.01.06.1` |
-| Next day release | New date, PATCH=0 | `26.01.07.0` |
-| Skip days | Use actual release date | `26.01.10.0` after `26.01.06.0` |
+| New release | Use today's date, PATCH=0 | `26.01.06-0` |
+| Same-day hotfix | Increment PATCH | `26.01.06-1` |
+| Next day release | New date, PATCH=0 | `26.01.07-0` |
+| Skip days | Use actual release date | `26.01.10-0` after `26.01.06-0` |
 
 ---
 
@@ -103,7 +103,7 @@ git push origin feature/add-monitoring
 
 ```bash
 # Branch from previous release tag
-git checkout -b hotfix/critical-security-fix 25.01.05.0
+git checkout -b hotfix/critical-security-fix 25.01.05-0
 
 # Fix the issue
 git commit -m "fix: patch critical vulnerability"
@@ -112,8 +112,8 @@ git commit -m "fix: patch critical vulnerability"
 git checkout main && git merge hotfix/critical-security-fix
 
 # Create hotfix tag (increment PATCH)
-git tag -a 25.01.05.1 -m "Hotfix: security patch"
-git push origin 25.01.05.1
+git tag -a 25.01.05-1 -m "Hotfix: security patch"
+git push origin 25.01.05-1
 ```
 
 ---
@@ -126,9 +126,9 @@ git push origin 25.01.05.1
 
 | Environment | Tag | Notes |
 |-------------|-----|-------|
-| **Dev** | `25.01.05.0` | First deployment |
-| **QA** | `25.01.05.0` | Same tag promoted |
-| **Prod** | `25.01.05.0` | Same tag promoted |
+| **Dev** | `25.01.05-0` | First deployment |
+| **QA** | `25.01.05-0` | Same tag promoted |
+| **Prod** | `25.01.05-0` | Same tag promoted |
 
 **Benefits:**
 - ✅ True atomic promotion - same artifact everywhere
@@ -153,7 +153,7 @@ stateDiagram-v2
     FeatureBranch --> PullRequest: Push and open PR
     PullRequest --> Main: Approved and merged
     Main --> DevDeployed: Auto-deploy to Dev
-    DevDeployed --> ReleaseTag: Create YY.MM.DD.PATCH tag
+    DevDeployed --> ReleaseTag: Create YY.MM.DD-PATCH tag
     ReleaseTag --> QADeployed: Promote to QA
     QADeployed --> QAValidated: QA testing
     QAValidated --> ProdDeployed: CAB approval → Deploy
@@ -166,8 +166,8 @@ stateDiagram-v2
 
 ```bash
 # Create release tag
-git tag -a 25.01.05.0 -m "Release January 5, 2025"
-git push origin 25.01.05.0
+git tag -a 25.01.05-0 -m "Release January 5, 2025"
+git push origin 25.01.05-0
 
 # Tekton deploys to dev automatically
 ```
@@ -181,7 +181,7 @@ git push origin 25.01.05.0
 ```bash
 # Promote to QA
 tkn pipeline start promote \
-  -p VERSION=25.01.05.0 \
+  -p VERSION=25.01.05-0 \
   -p FROM_ENVIRONMENT=dev \
   -p TO_ENVIRONMENT=qa
 ```
@@ -198,7 +198,7 @@ tkn pipeline start promote \
 ```bash
 # Promote to production
 tkn pipeline start promote \
-  -p VERSION=25.01.05.0 \
+  -p VERSION=25.01.05-0 \
   -p FROM_ENVIRONMENT=qa \
   -p TO_ENVIRONMENT=prod
 ```
@@ -215,7 +215,7 @@ tkn pipeline start promote \
 
 ## Component Versioning
 
-All components use the same YY.MM.DD.PATCH format:
+All components use the same YY.MM.DD-PATCH format:
 
 ### Ansible Collections
 
@@ -223,14 +223,14 @@ All components use the same YY.MM.DD.PATCH format:
 # galaxy.yml
 namespace: myorg
 name: custom_collection
-version: "25.01.05.0"
+version: "25.01.05-0"
 ```
 
 ### Execution Environments
 
 ```bash
 # Image tags
-quay.io/myorg/automation-ee:25.01.05.0
+quay.io/myorg/automation-ee:25.01.05-0
 
 # With SHA digest (recommended for prod)
 quay.io/myorg/automation-ee@sha256:abc123...
@@ -242,25 +242,25 @@ quay.io/myorg/automation-ee@sha256:abc123...
 controller_projects:
   - name: "Automation Collection - Prod"
     scm_url: "https://github.com/org/aap-config-as-code"
-    scm_branch: "25.01.05.0"  # Specific tag
+    scm_branch: "25.01.05-0"  # Specific tag
     scm_update_on_launch: false
 ```
 
 ### Release Manifests
 
 ```yaml
-# releases/release-25.01.05.0.yaml
-version: "25.01.05.0"
+# releases/release-25.01.05-0.yaml
+version: "25.01.05-0"
 created: "2025-01-05T10:00:00Z"
 
 components:
   aap_configuration:
     commit: "abc123..."
-    tag: "25.01.05.0"
+    tag: "25.01.05-0"
   collections:
-    version: "25.01.05.0"
+    version: "25.01.05-0"
   execution_environment:
-    tag: "25.01.05.0"
+    tag: "25.01.05-0"
     digest: "sha256:fedcba..."
 
 environments:
@@ -278,16 +278,16 @@ environments:
 
 ```yaml
 # ✅ CORRECT - Synchronized
-Release: 25.01.05.0
-  ├── AAP Config:   25.01.05.0
-  ├── Collection:   25.01.05.0
-  └── EE Image:     25.01.05.0
+Release: 25.01.05-0
+  ├── AAP Config:   25.01.05-0
+  ├── Collection:   25.01.05-0
+  └── EE Image:     25.01.05-0
 
 # ❌ WRONG - Mismatched
-Release: 25.01.05.0
-  ├── AAP Config:   25.01.05.0
-  ├── Collection:   25.01.04.0  # ❌ Wrong
-  └── EE Image:     25.01.05.1  # ❌ Wrong
+Release: 25.01.05-0
+  ├── AAP Config:   25.01.05-0
+  ├── Collection:   25.01.04-0  # ❌ Wrong
+  └── EE Image:     25.01.05-1  # ❌ Wrong
 ```
 
 ---
@@ -298,18 +298,18 @@ Release: 25.01.05.0
 
 ```bash
 tkn pipeline start rollback \
-  -p TARGET_VERSION=25.01.04.0 \
+  -p TARGET_VERSION=25.01.04-0 \
   -p ENVIRONMENT=prod
 ```
 
 ### Creating Audit Trail
 
 ```bash
-# Current: 25.01.05.1 (has issues)
+# Current: 25.01.05-1 (has issues)
 # Create new release pointing to previous commit
-git tag -a 25.01.06.0 -m "Rollback to 25.01.05.0 state
+git tag -a 25.01.06-0 -m "Rollback to 25.01.05-0 state
 
-Rolled back from: 25.01.05.1
+Rolled back from: 25.01.05-1
 Reason: Critical issue in webserver
 Rollback approved: CHG0001236"
 ```
@@ -339,28 +339,28 @@ gh pr merge --squash
 
 # 5. Create release tag
 git checkout main && git pull
-git tag -a 25.01.05.0 -m "Release January 5, 2025: Add webserver role"
-git push origin 25.01.05.0
+git tag -a 25.01.05-0 -m "Release January 5, 2025: Add webserver role"
+git push origin 25.01.05-0
 
 # === Promotion ===
 
 # 6. Auto-deployed to Dev
 # 7. Promote to QA after dev validation
-tkn pipeline start promote -p VERSION=25.01.05.0 -p FROM=dev -p TO=qa
+tkn pipeline start promote -p VERSION=25.01.05-0 -p FROM=dev -p TO=qa
 
 # 8. QA validates, then promote to prod
-tkn pipeline start promote -p VERSION=25.01.05.0 -p FROM=qa -p TO=prod
+tkn pipeline start promote -p VERSION=25.01.05-0 -p FROM=qa -p TO=prod
 
 # === Hotfix (if needed) ===
 
 # 9. Create hotfix branch
-git checkout -b hotfix/critical-fix 25.01.05.0
+git checkout -b hotfix/critical-fix 25.01.05-0
 git commit -m "fix: correct port binding"
 git checkout main && git merge hotfix/critical-fix
 
 # 10. Create hotfix tag
-git tag -a 25.01.05.1 -m "Hotfix: port binding"
-git push origin 25.01.05.1
+git tag -a 25.01.05-1 -m "Hotfix: port binding"
+git push origin 25.01.05-1
 ```
 
 ---
@@ -391,22 +391,22 @@ scm_branch: "main"
 
 **Instead:**
 ```yaml
-execution_environment: "my-ee:25.01.05.0"
-scm_branch: "25.01.05.0"
+execution_environment: "my-ee:25.01.05-0"
+scm_branch: "25.01.05-0"
 ```
 
 ### ❌ Reusing or Moving Tags
 
 **Bad:**
 ```bash
-git tag -d 25.01.05.0        # Delete
-git tag 25.01.05.0 <new>     # Recreate
+git tag -d 25.01.05-0        # Delete
+git tag 25.01.05-0 <new>     # Recreate
 git push --force             # Force push
 ```
 
 **Instead:** Create new PATCH version
 ```bash
-git tag 25.01.05.1
+git tag 25.01.05-1
 ```
 
 ---
@@ -453,24 +453,24 @@ allow_deletions: false
 
 ```bash
 # ✅ GOOD
-git tag -a 25.01.05.0 -m "Release January 5, 2025
+git tag -a 25.01.05-0 -m "Release January 5, 2025
 
 Features:
 - Monitoring role with Prometheus
 - Database backup automation
 
 Testing: All molecule tests passed
-Rollback: Revert to 25.01.04.0 if issues"
+Rollback: Revert to 25.01.04-0 if issues"
 
 # ❌ BAD
-git tag 25.01.05.0  # No message
+git tag 25.01.05-0  # No message
 ```
 
 ### 3. Always Use Full Format
 
 ```bash
 # ✅ GOOD
-25.01.05.0
+25.01.05-0
 
 # ❌ BAD
 25.1.5.0     # Missing leading zeros
@@ -481,7 +481,7 @@ git tag 25.01.05.0  # No message
 
 ```bash
 # Create release
-tkn pipeline start create-release -p VERSION=25.01.05.0
+tkn pipeline start create-release -p VERSION=25.01.05-0
 
 # Pipeline validates format, gathers commits, creates manifest
 ```
@@ -498,7 +498,7 @@ Document breaking changes prominently in:
 - Release manifest metadata
 
 ```bash
-git tag -a 25.02.01.0 -m "⚠️ BREAKING CHANGES
+git tag -a 25.02.01-0 -m "⚠️ BREAKING CHANGES
 - Removed deprecated inventory format
 - Changed role variable names
 See CHANGELOG.md for migration guide"
@@ -509,24 +509,24 @@ See CHANGELOG.md for migration guide"
 Yes, version = release date, not sequential days.
 
 ```bash
-25.01.05.0  # Jan 5
-25.01.10.0  # Jan 10 (skipped 6-9)
+25.01.05-0  # Jan 5
+25.01.10-0  # Jan 10 (skipped 6-9)
 ```
 
 ### Q: Multiple releases per day?
 
 Use PATCH:
 ```bash
-25.01.05.0  # Morning
-25.01.05.1  # Afternoon hotfix
-25.01.05.2  # Evening fix
+25.01.05-0  # Morning
+25.01.05-1  # Afternoon hotfix
+25.01.05-2  # Evening fix
 ```
 
 ### Q: How do I compare versions?
 
 Lexicographic sorting works correctly:
 ```bash
-25.01.05.0 < 25.01.05.1 < 25.01.06.0 < 25.02.01.0
+25.01.05-0 < 25.01.05-1 < 25.01.06-0 < 25.02.01-0
 ```
 
 ---

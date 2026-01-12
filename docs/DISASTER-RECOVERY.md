@@ -178,7 +178,7 @@ ls automation-release-manifest/releases/
 
 # Rollback to previous version using Tekton pipeline
 tkn pipeline start rollback \
-  -p TARGET_VERSION=25.01.04.0 \
+  -p TARGET_VERSION=25.01.04-0 \
   -p ENVIRONMENT=prod \
   -p REASON="Rollback due to incident" \
   -w name=source,volumeClaimTemplateFile=pvc-template.yaml \
