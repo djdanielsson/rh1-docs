@@ -192,7 +192,7 @@ graph TD
    - **Execution Environment**: Container image with all runtime dependencies
 
 3. **Git Repositories** (Source of Truth)
-   - Five repositories that contain all configuration
+   - Six repositories that contain all configuration
    - Each tracked by Git SHA for exact versioning
 
 4. **Configuration Files** (Declarative Config)

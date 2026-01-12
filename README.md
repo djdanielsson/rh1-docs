@@ -47,7 +47,7 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 └── automation-release-manifest/         # Git Repo 6: Release Management
 ```
 
-## The Five Git Repositories
+## The Six Git Repositories
 
 ### 1. cluster-config (Platform GitOps)
 - **Repository**: https://github.com/djdanielsson/rh1-cluster-config.git
@@ -222,8 +222,8 @@ See **[Platform Guide](./docs/PLATFORM-GUIDE.md)** for complete documentation.
 ## 📊 Platform Statistics
 
 - **Documentation**: 13 comprehensive guides + 6 architecture diagrams
-- **Pre-commit Hooks**: 85 hooks across 5 repositories
-- **CI/CD Workflows**: 25 GitHub Actions workflows
+- **Pre-commit Hooks**: 85 hooks across 6 repositories
+- **CI/CD Workflows**: 15 GitHub Actions workflows
 - **Test Coverage**: Unit, integration, Molecule, validation
 - **Example Content**: 4 roles, 2 modules, 4 filters, 2 lookups
 - **Standards**: Aligned with Red Hat CoP and ansible-lint rules

@@ -10,7 +10,7 @@
 
 ### Overview
 
-- **25 workflows** across 5 repositories
+- **15 workflows** across 6 repositories
 - **GitHub Actions** for testing & linting (quality gates)
 - **Tekton Pipelines** for building & releasing (handled on cluster)
 - **Average PR validation**: <5 minutes
