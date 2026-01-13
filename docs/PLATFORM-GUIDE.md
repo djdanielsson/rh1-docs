@@ -821,12 +821,12 @@ Rollback to any previous release through the pipeline system.
 | Repository | Link |
 |------------|------|
 | Platform Overview | [README.md](../README.md) |
-| cluster-config | [cluster-config/README.md](../cluster-config/README.md) |
-| aap-config-as-code | [aap-config-as-code/README.md](../aap-config-as-code/README.md) |
-| automation-playbooks | [automation-playbooks/README.md](../automation-playbooks/README.md) |
-| automation-collection-example | [automation-collection-example/README.md](../automation-collection-example/README.md) |
-| automation-ee-example | [automation-ee-example/README.md](../automation-ee-example/README.md) |
-| automation-release-manifest | [automation-release-manifest/README.md](../automation-release-manifest/README.md) |
+| cluster-config | [cluster-config/README.md](https://github.com/djdanielsson/rh1-cluster-config/blob/main/README.md) |
+| aap-config-as-code | [aap-config-as-code/README.md](https://github.com/djdanielsson/rh1-aap-config-as-code/blob/main/README.md) |
+| automation-playbooks | [automation-playbooks/README.md](https://github.com/djdanielsson/rh1-automation-playbooks/blob/main/README.md) |
+| automation-collection-example | [automation-collection-example/README.md](https://github.com/djdanielsson/rh1-custom-collection/blob/main/README.md) |
+| automation-ee-example | [automation-ee-example/README.md](https://github.com/djdanielsson/rh1-ee/blob/main/README.md) |
+| automation-release-manifest | [automation-release-manifest/README.md](https://github.com/djdanielsson/rh1-release-manifest/blob/main/README.md) |
 
 ---
 
