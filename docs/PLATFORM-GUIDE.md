@@ -48,6 +48,53 @@ This platform implements a complete automation lifecycle using GitOps principles
 
 **Complete dependency tree**: [Dependency Tree](./diagrams/DEPENDENCY-TREE.md)
 
+---
+
+## Environment Overview
+
+This platform is designed for **enterprise-grade automation** in a **cloud-native Kubernetes environment** with **Red Hat Ansible Automation Platform (AAP)**.
+
+### Infrastructure Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Platform** | OpenShift Container Platform | Kubernetes orchestration, operators |
+| **Automation** | Red Hat Ansible Automation Platform | Enterprise Ansible control plane |
+| **CI/CD** | OpenShift Pipelines (Tekton) | GitOps pipelines, automated builds |
+| **GitOps** | OpenShift GitOps (ArgoCD) | Declarative platform configuration |
+| **Registry** | Quay Enterprise | Container image registry |
+| **Secrets** | External Secret Operator | Secure credential management |
+
+### Development Environment
+
+- **Local Development**: Dev Containers (VS Code + Docker) with full toolchain
+- **Git Workflow**: Trunk-based development with CalVer tagging (`YY.M.D-PATCH`)
+- **Quality Gates**: Pre-commit hooks, Molecule testing, ansible-lint validation
+- **Documentation**: Complete guides, examples, and automated validation
+
+### Production Environment
+
+- **Multi-environment**: Dev → QA → Production with approval gates
+- **Atomic Promotion**: All components version-locked together via release manifests
+- **Dynamic Inventory**: All automation uses dynamic inventory sources (never static files)
+- **Security**: Zero secrets in Git, external secret management, SBOM generation
+
+### Dynamic Inventory Management
+
+This platform uses **dynamic inventory exclusively** for all automation:
+
+- **No Static Files**: All inventory is sourced from authoritative systems
+- **Cloud-Native**: OpenShift Virtualization (OCP-V), cloud provider APIs, CMDB systems
+- **Always Fresh**: Inventory updates automatically without manual maintenance
+- **Scalable**: New hosts discovered automatically as infrastructure scales
+
+**Why dynamic inventory?**
+- Single source of truth eliminates stale host lists
+- Automatic discovery prevents manual inventory drift
+- Enables cloud-native scaling without configuration changes
+
+---
+
 ### Core Concepts
 
 | Concept | Description |
@@ -64,7 +111,7 @@ This platform implements a complete automation lifecycle using GitOps principles
 | **cluster-config** | Platform GitOps—Kubernetes manifests, operators, AAP instances | ArgoCD |
 | **aap-config-as-code** | AAP configuration—job templates, inventories, credentials, projects | Tekton |
 | **automation-playbooks** | Ansible playbooks that orchestrate role execution | Tekton |
-| **automation-collection-example** | Ansible content—roles, modules, plugins called by playbooks | Tekton (CI) |
+| **automation-collection-example** | Ansible collection, modules, plugins called by playbooks | Tekton (CI) |
 | **automation-ee-example** | Execution Environment container definition | Tekton (build) |
 | **automation-release-manifest** | Release version tracking and promotion pipelines | Tekton |
 
@@ -187,7 +234,7 @@ ansible-playbook --check -i localhost, --connection=local \
 
 ### Step 2: Create Molecule Tests
 
-Every role needs Molecule tests. Use the modern approach of centralized molecule scenarios in `extensions/molecule/` rather than role-specific test directories.
+Every role requires Molecule tests. Use the modern approach: place scenarios in `extensions/molecule/` for reusability across collection-based tests (rather than role-specific directories).
 
 ```bash
 cd automation-collection-example
@@ -823,13 +870,13 @@ YY.M.D-PATCH
 
 ### Constitution Summary
 
-| Article | Principle |
-|---------|-----------|
-| **I** | GitOps First—all config in Git |
-| **II** | Separation of Duties—ArgoCD for platform, Tekton for apps |
-| **III** | Atomic Promotion—version-locked releases |
-| **IV** | Production-Grade Quality—idempotent, tested, modular |
-| **V** | Zero-Trust Security—no secrets in Git |
+| Article | Principle | Core Implementation |
+|---------|-----------|-------------------|
+| **I** | GitOps First—all config in Git | Dual GitOps loops (ArgoCD + Tekton) |
+| **II** | Separation of Duties—ArgoCD for platform, Tekton for apps | ArgoCD manages infra; Tekton manages apps |
+| **III** | Atomic Promotion—version-locked releases | Release manifests synchronize all components |
+| **IV** | Production-Grade Quality—idempotent, tested, modular | Pre-commit hooks, Molecule tests, validation |
+| **V** | Zero-Trust Security—no secrets in Git | External secret management, no Git secrets |
 
 ---
 
