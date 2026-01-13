@@ -99,10 +99,10 @@ graph TB
     end
 
     subgraph "QA Promotion"
-        TAG_QA[Create Release Tag<br/>git tag 25.01.05-0]
-        MANIFEST_QA[Create Manifest<br/>release-25.01.05-0.yaml]
-        BUILD_EE_QA[Build EE<br/>ee:25.01.05-0]
-        SYNC_QA[AAP QA Project<br/>Sync to 25.01.05-0]
+        TAG_QA[Create Release Tag<br/>git tag 26.1.5-0]
+        MANIFEST_QA[Create Manifest<br/>release-26.1.5-0.yaml]
+        BUILD_EE_QA[Build EE<br/>ee:26.1.5-0]
+        SYNC_QA[AAP QA Project<br/>Sync to 26.1.5-0]
         DEPLOY_QA[Deploy to AAP QA]
         TEST_QA[Full Test Suite]
         APPROVE_QA[QA Sign-off]
@@ -111,11 +111,11 @@ graph TB
     subgraph "Prod Promotion"
         CAB[Change Advisory Board]
         APPROVE_PROD[Production Approval]
-        TAG_PROD[Same Tag Promoted<br/>25.01.05-0]
+        TAG_PROD[Same Tag Promoted<br/>26.1.5-0]
         BACKUP[Backup Rollback Point]
         MANIFEST_PROD[Update Manifest<br/>mark prod deployed]
-        BUILD_EE_PROD[Same EE<br/>ee:25.01.05-0]
-        SYNC_PROD[AAP Prod Project<br/>Sync to 25.01.05-0]
+        BUILD_EE_PROD[Same EE<br/>ee:26.1.5-0]
+        SYNC_PROD[AAP Prod Project<br/>Sync to 26.1.5-0]
         DEPLOY_PROD[Deploy to AAP Prod]
         VERIFY_PROD[Production Verification]
     end
@@ -169,9 +169,9 @@ graph TB
 
 | Format | Example | Description |
 |--------|---------|-------------|
-| `YY.MM.DD-PATCH` | `25.01.05-0` | January 5, 2025 - Initial release |
-| `YY.MM.DD-PATCH` | `25.01.05-1` | January 5, 2025 - Hotfix |
-| `YY.MM.DD-PATCH` | `25.01.06-0` | January 6, 2025 - New release |
+| `YY.M.D-PATCH` | `26.1.5-0` | January 5, 2025 - Initial release |
+| `YY.M.D-PATCH` | `26.1.5-1` | January 5, 2025 - Hotfix |
+| `YY.M.D-PATCH` | `26.1.6-0` | January 6, 2025 - New release |
 
 ### Atomic Promotion
 
@@ -186,18 +186,18 @@ graph TB
 # Create release tag
 git checkout main
 git pull
-git tag -a 25.01.05-0 -m "Release January 5, 2025
+git tag -a 26.1.5-0 -m "Release January 5, 2025
 
 Features:
 - Add monitoring role
 - Update database backup
 
-Rollback: 25.01.04-0"
-git push origin 25.01.05-0
+Rollback: 26.1.4-0"
+git push origin 26.1.5-0
 
 # Hotfix (same day)
-git tag -a 25.01.05-1 -m "Hotfix: Critical security patch"
-git push origin 25.01.05-1
+git tag -a 26.1.5-1 -m "Hotfix: Critical security patch"
+git push origin 26.1.5-1
 ```
 
 **See**: [GIT-WORKFLOW.md](../GIT-WORKFLOW.md) for complete workflow
@@ -211,7 +211,7 @@ git push origin 25.01.05-1
 ```mermaid
 graph TB
     subgraph "Release Manifest"
-        DEV_M["release-25.01.05-0.yaml"]
+        DEV_M["release-26.1.5-0.yaml"]
         DEV_TAG["git-tag: dev-abc123"]
         DEV_COL["collection-commit: abc1234..."]
         DEV_EE["ee-image: ee:dev-abc123"]
@@ -220,18 +220,18 @@ graph TB
 
     subgraph "QA Manifest"
         QA_M["environments.qa.deployed: true"]
-        QA_TAG["git-tag: 25.01.05-0"]
+        QA_TAG["git-tag: 26.1.5-0"]
         QA_COL["collection-commit: abc1234..."]
-        QA_EE["ee-image: ee:25.01.05-0"]
-        QA_AAP["aap-config-tag: 25.01.05-0"]
+        QA_EE["ee-image: ee:26.1.5-0"]
+        QA_AAP["aap-config-tag: 26.1.5-0"]
     end
 
     subgraph "Prod Manifest"
         PROD_M["environments.prod.deployed: true"]
-        PROD_TAG["git-tag: 25.01.05-0"]
+        PROD_TAG["git-tag: 26.1.5-0"]
         PROD_COL["collection-commit: abc1234..."]
-        PROD_EE["ee-image: ee:25.01.05-0"]
-        PROD_AAP["aap-config-tag: 25.01.05-0"]
+        PROD_EE["ee-image: ee:26.1.5-0"]
+        PROD_AAP["aap-config-tag: 26.1.5-0"]
         PROD_APPROVED["approved: true<br/>approved-by: CAB<br/>approved-at: 2025-01-04T15:30:00Z"]
     end
 
@@ -285,16 +285,16 @@ sequenceDiagram
     participant Tek as Tekton
     participant AAP_Q as AAP QA
 
-    QA_Lead->>GH: Create release tag (25.01.05-0)
+    QA_Lead->>GH: Create release tag (26.1.5-0)
     GH->>Tek: Tag trigger → promotion pipeline
 
-    Tek->>Tek: Build EE (ee:25.01.05-0)
+    Tek->>Tek: Build EE (ee:26.1.5-0)
     Tek->>Tek: Create QA manifest
     Tek->>GH: Commit QA manifest
 
     Tek->>AAP_Q: Apply AAP config<br/>(via infra.aap_configuration)
-    AAP_Q->>AAP_Q: Sync Project to 25.01.05-0
-    AAP_Q->>AAP_Q: Pull EE ee:25.01.05-0
+    AAP_Q->>AAP_Q: Sync Project to 26.1.5-0
+    AAP_Q->>AAP_Q: Pull EE ee:26.1.5-0
     AAP_Q->>AAP_Q: Run smoke tests
     AAP_Q-->>Tek: Config applied
     Tek-->>QA_Lead: QA deployment complete
@@ -317,19 +317,19 @@ sequenceDiagram
     participant AAP_P as AAP Prod
     participant Backup as Backup Service
 
-    CAB->>GH: Approve prod deployment (25.01.05-0)
+    CAB->>GH: Approve prod deployment (26.1.5-0)
     GH->>Tek: Tag trigger → prod pipeline
 
     Tek->>Tek: Validate QA manifest
-    Tek->>Tek: Use same EE (ee:25.01.05-0)
+    Tek->>Tek: Use same EE (ee:26.1.5-0)
     Tek->>Backup: Create backup/snapshot
     Backup-->>Tek: Backup ID
     Tek->>Tek: Create prod manifest
     Tek->>GH: Commit prod manifest
 
     Tek->>AAP_P: Apply AAP config<br/>(via infra.aap_configuration)
-    AAP_P->>AAP_P: Sync Project to 25.01.05-0
-    AAP_P->>AAP_P: Pull EE ee:25.01.05-0
+    AAP_P->>AAP_P: Sync Project to 26.1.5-0
+    AAP_P->>AAP_P: Pull EE ee:26.1.5-0
     AAP_P->>AAP_P: Health checks
     AAP_P-->>Tek: Config applied
     Tek-->>CAB: Production deployed
@@ -596,7 +596,7 @@ stateDiagram-v2
 ```mermaid
 graph TB
     subgraph "Repository Changes"
-        COL[Collection Changes<br/>25.01.05-0]
+        COL[Collection Changes<br/>26.1.5-0]
         EE[EE Changes<br/>Added packages]
         AAP[AAP Config Changes<br/>New job templates]
     end

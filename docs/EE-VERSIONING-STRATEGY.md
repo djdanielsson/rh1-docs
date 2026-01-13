@@ -2,20 +2,20 @@
 
 **Immutable, Version-Locked EE Images Synchronized with Code Releases**
 
-**Version Format**: YY.MM.DD-PATCH (Calendar Versioning)
+**Version Format**: YY.M.D-PATCH (Calendar Versioning)
 
 ---
 
 ## 🎯 Overview
 
-Execution Environments (EE) must be **version-locked** using **YY.MM.DD-PATCH** format to match code release tags, ensuring that Ansible playbooks and their runtime dependencies are always synchronized.
+Execution Environments (EE) must be **version-locked** using **YY.M.D-PATCH** format to match code release tags, ensuring that Ansible playbooks and their runtime dependencies are always synchronized.
 
 ### Core Principle
 
-> **Every code release tag has a corresponding EE image tag using YY.MM.DD-PATCH format**
+> **Every code release tag has a corresponding EE image tag using YY.M.D-PATCH format**
 
 ```
-Code Tag: 25.01.05-0  →  EE Image: my-registry/my-ee:25.01.05-0
+Code Tag: 26.1.5-0  →  EE Image: my-registry/my-ee:26.1.5-0
 ```
 
 **Benefits**:
@@ -47,8 +47,8 @@ Code Tag: 25.01.05-0  →  EE Image: my-registry/my-ee:25.01.05-0
 
 | Component | Format | Example |
 |-----------|--------|---------|
-| **Code Tag** | `YY.MM.DD-PATCH` | `25.01.05-0` |
-| **EE Image** | `ee:YY.MM.DD-PATCH` | `quay.io/myorg/automation-ee:25.01.05-0` |
+| **Code Tag** | `YY.M.D-PATCH` | `26.1.5-0` |
+| **EE Image** | `ee:YY.M.D-PATCH` | `quay.io/myorg/automation-ee:26.1.5-0` |
 
 **Note**: Same tag used for both code and EE image. Same tag promotes through all environments (dev → qa → prod).
 
@@ -56,7 +56,7 @@ Code Tag: 25.01.05-0  →  EE Image: my-registry/my-ee:25.01.05-0
 
 ```bash
 # Primary version tag (immutable)
-quay.io/myorg/automation-ee:25.01.05-0
+quay.io/myorg/automation-ee:26.1.5-0
 
 # Git commit SHA for traceability
 quay.io/myorg/automation-ee:sha-abc123def456
@@ -67,7 +67,7 @@ quay.io/myorg/automation-ee:dev-latest      # ⚠️ Dev only, never use in QA/P
 
 ### Tag Immutability Rules
 
-- ✅ **Version tags** (`YY.MM.DD-PATCH`): **IMMUTABLE** - never overwritten
+- ✅ **Version tags** (`YY.M.D-PATCH`): **IMMUTABLE** - never overwritten
 - ✅ **SHA tags** (`sha-*`): **IMMUTABLE** - permanent record
 - ⚠️ **Convenience tags** (`dev-latest`): **MUTABLE** - dev environment only
 - ❌ **Never use** `latest` in QA or Production
@@ -107,13 +107,13 @@ echo "✅ Built and pushed EE: ${VERSION}"
 
 ### 2. QA Build (Manual Trigger)
 
-**Trigger**: Git tag creation (`YY.MM.DD-PATCH`)
+**Trigger**: Git tag creation (`YY.M.D-PATCH`)
 
 ```bash
 #!/bin/bash
 # Triggered by Tekton pipeline on git tag creation
 
-# Extract tag from git (e.g., 25.01.05-0)
+# Extract tag from git (e.g., 26.1.5-0)
 QA_TAG="${1}"  # Passed from Tekton trigger
 
 # Extract version from tag (remove qa- prefix)
@@ -219,17 +219,17 @@ graph TB
     end
 
     subgraph "2. QA Promotion"
-        TAG_QA[Create Git tag:<br/>25.01.05-0]
-        BUILD_QA[Build EE:<br/>ee:25.01.05-0]
-        MANIFEST_QA[Create Manifest:<br/>release-25.01.05-0.yaml]
+        TAG_QA[Create Git tag:<br/>26.1.5-0]
+        BUILD_QA[Build EE:<br/>ee:26.1.5-0]
+        MANIFEST_QA[Create Manifest:<br/>release-26.1.5-0.yaml]
         DEPLOY_QA[Update AAP QA<br/>Job Template]
         TEST_QA[QA Testing]
     end
 
     subgraph "3. Production Promotion"
         APPROVE[CAB Approval]
-        TAG_PROD[Same tag promoted:<br/>25.01.05-0]
-        BUILD_PROD[Same EE:<br/>ee:25.01.05-0]
+        TAG_PROD[Same tag promoted:<br/>26.1.5-0]
+        BUILD_PROD[Same EE:<br/>ee:26.1.5-0]
         SBOM[Generate SBOM<br/>+ Scan]
         MANIFEST_PROD[Update Manifest:<br/>mark prod deployed]
         DEPLOY_PROD[Update AAP Prod<br/>Job Template]
@@ -261,11 +261,11 @@ graph TB
 
 ```yaml
 # Step 1: Developer creates Git tag
-$ git tag -a 25.01.05-0 -m "Release January 5, 2025"
-$ git push origin 25.01.05-0
+$ git tag -a 26.1.5-0 -m "Release January 5, 2025"
+$ git push origin 26.1.5-0
 
 # Step 2: Tekton pipeline triggered
-#   - Builds EE with tag: ee:25.01.05-0
+#   - Builds EE with tag: ee:26.1.5-0
 #   - Creates release manifest
 #   - Updates AAP QA Job Templates
 
@@ -274,13 +274,13 @@ $ git push origin 25.01.05-0
 controller_templates:
   - name: "Deploy Webserver - QA"
     project: "Automation Collection"
-    project_version: "25.01.05-0"  # ← Git tag
+    project_version: "26.1.5-0"  # ← Git tag
     execution_environment: "Automation EE QA"
     # ↓ EE configured to use version-tagged image
 
 controller_execution_environments:
   - name: "Automation EE QA"
-    image: "quay.io/myorg/automation-ee:25.01.05-0"  # ← Matching EE tag
+    image: "quay.io/myorg/automation-ee:26.1.5-0"  # ← Matching EE tag
     pull: missing
 ```
 
@@ -301,10 +301,10 @@ controller_templates:
     project: "Automation Collection"
 
     # ⚠️ CRITICAL: Lock to specific Git tag
-    scm_branch: "25.01.05-0"  # NOT 'main', specific tag
+    scm_branch: "26.1.5-0"  # NOT 'main', specific tag
 
     # ⚠️ CRITICAL: Lock to version-tagged EE
-    execution_environment: "Automation EE - 25.01.05-0"
+    execution_environment: "Automation EE - 26.1.5-0"
 
     playbook: "playbooks/deploy-webserver.yml"
 
@@ -322,12 +322,12 @@ controller_templates:
 # File: aap-config-as-code/group_vars/aap_qa/execution_environments.yml
 
 controller_execution_environments:
-  - name: "Automation EE - 25.01.05-0"
-    description: "Execution Environment (25.01.05-0)"
+  - name: "Automation EE - 26.1.5-0"
+    description: "Execution Environment (26.1.5-0)"
     organization: "Platform"
 
     # ⚠️ CRITICAL: Use full image path with version tag
-    image: "quay.io/myorg/automation-ee:25.01.05-0"
+    image: "quay.io/myorg/automation-ee:26.1.5-0"
 
     # Use digest for ultimate immutability (optional but recommended)
     # image: "quay.io/myorg/automation-ee@sha256:abc123..."
@@ -342,15 +342,15 @@ controller_execution_environments:
 # File: aap-config-as-code/group_vars/aap_prod/execution_environments.yml
 
 controller_execution_environments:
-  - name: "Automation EE - 25.01.04-0"
-    description: "Production Execution Environment (25.01.04-0)"
+  - name: "Automation EE - 26.1.4-0"
+    description: "Production Execution Environment (26.1.4-0)"
     organization: "Platform"
 
     # Best Practice: Use image digest in production
     image: "quay.io/myorg/automation-ee@sha256:1234567890abcdef..."
 
     # Or version tag (also acceptable)
-    # image: "quay.io/myorg/automation-ee:25.01.04-0"
+    # image: "quay.io/myorg/automation-ee:26.1.4-0"
 
     credential: "Quay.io Registry"
     pull: "missing"
@@ -363,9 +363,9 @@ controller_execution_environments:
 ### Complete Release Manifest with EE Version
 
 ```yaml
-# File: automation-release-manifest/releases/qa/release-25.01.05-0.yaml
+# File: automation-release-manifest/releases/qa/release-26.1.5-0.yaml
 
-version: "25.01.05-0"
+version: "26.1.5-0"
 created: "2025-01-04T10:30:00Z"
 created_by: "tekton-pipeline"
 environment: "qa"
@@ -374,13 +374,13 @@ components:
   automation_collection:
     repository: "github.com/myorg/automation-collection"
     ref_type: "tag"
-    ref: "25.01.05-0"
+    ref: "26.1.5-0"
     commit: "abc1234567890abcdef1234567890abcdef12345"
 
   execution_environment:
     name: "automation-ee"
     registry: "quay.io"
-    image: "quay.io/myorg/automation-ee:25.01.05-0"
+    image: "quay.io/myorg/automation-ee:26.1.5-0"
     digest: "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
     built_at: "2025-01-04T10:25:00Z"
     base_image: "quay.io/ansible/creator-ee:v0.20.1"
@@ -411,7 +411,7 @@ components:
   aap_configuration:
     repository: "github.com/myorg/aap-config-as-code"
     ref_type: "tag"
-    ref: "25.01.05-0"
+    ref: "26.1.5-0"
     commit: "def4567890abcdef1234567890abcdef45678901"
 
 testing:
@@ -426,8 +426,8 @@ approvals:
     ticket: "QA-1234"
 
 artifacts:
-  sbom: "https://artifactory.example.com/sbom/25.01.05-0.json"
-  vulnerability_scan: "https://artifactory.example.com/scans/25.01.05-0.json"
+  sbom: "https://artifactory.example.com/sbom/26.1.5-0.json"
+  vulnerability_scan: "https://artifactory.example.com/scans/26.1.5-0.json"
   collection_tarball: "https://artifactory.example.com/myorg-custom_collection-1.1.0.tar.gz"
 ```
 
@@ -448,7 +448,7 @@ metadata:
 spec:
   params:
     - name: git-tag
-      description: "Git tag (e.g., 25.01.05-0)"
+      description: "Git tag (e.g., 26.1.5-0)"
     - name: git-url
       default: "https://github.com/myorg/automation-ee"
     - name: image-registry
@@ -668,19 +668,19 @@ jobs:
 
 # 1. Identify previous working version
 $ kubectl get -n aap-prod deployments -o yaml | grep image:
-# Previous: quay.io/myorg/automation-ee:25.01.04-0
+# Previous: quay.io/myorg/automation-ee:26.1.4-0
 
 # 2. Update AAP Job Template (via CaC)
 # File: aap-config-as-code/group_vars/aap_prod/job_templates.yml
 
 controller_templates:
   - name: "Deploy Webserver - Prod"
-    scm_branch: "25.01.04-0"  # ← Rollback to previous tag
-    execution_environment: "Automation EE - 25.01.04-0"  # ← Rollback EE
+    scm_branch: "26.1.4-0"  # ← Rollback to previous tag
+    execution_environment: "Automation EE - 26.1.4-0"  # ← Rollback EE
 
 controller_execution_environments:
-  - name: "Automation EE - 25.01.04-0"
-    image: "quay.io/myorg/automation-ee:25.01.04-0"  # ← Previous version
+  - name: "Automation EE - 26.1.4-0"
+    image: "quay.io/myorg/automation-ee:26.1.4-0"  # ← Previous version
 
 # 3. Apply CaC to revert
 $ cd aap-config-as-code
@@ -689,7 +689,7 @@ $ ansible-playbook playbook.yml -i inventory.yml -l aap_prod
 # 4. Verify rollback
 $ curl https://aap-prod.example.com/api/v2/job_templates/123/ | \
   jq '.execution_environment'
-# Expected: "Automation EE - 25.01.04-0"
+# Expected: "Automation EE - 26.1.4-0"
 ```
 
 ### Rollback Checklist
@@ -746,7 +746,7 @@ netaddr
 image: "quay.io/myorg/automation-ee@sha256:abc123..."
 
 # ✅ GOOD - Use version tag
-image: "quay.io/myorg/automation-ee:25.01.04-0"
+image: "quay.io/myorg/automation-ee:26.1.4-0"
 
 # ❌ BAD - Mutable tag
 image: "quay.io/myorg/automation-ee:latest"
@@ -756,9 +756,9 @@ image: "quay.io/myorg/automation-ee:latest"
 
 ```bash
 # When creating QA release
-git tag 25.01.05-0
+git tag 26.1.5-0
 # EE must be built with matching tag
-ansible-builder build -t automation-ee:25.01.05-0
+ansible-builder build -t automation-ee:26.1.5-0
 ```
 
 ### 4. Store SBOM and Scan Results
@@ -766,15 +766,15 @@ ansible-builder build -t automation-ee:25.01.05-0
 ```yaml
 # Store in release manifest
 artifacts:
-  sbom: "https://artifactory.example.com/sbom/25.01.05-0.json"
-  vulnerability_scan: "https://artifactory.example.com/scans/25.01.05-0.json"
+  sbom: "https://artifactory.example.com/sbom/26.1.5-0.json"
+  vulnerability_scan: "https://artifactory.example.com/scans/26.1.5-0.json"
 ```
 
 ### 5. Test EE Before Promotion
 
 ```bash
 # Test EE locally before promoting
-podman run -it quay.io/myorg/automation-ee:25.01.05-0 /bin/bash
+podman run -it quay.io/myorg/automation-ee:26.1.5-0 /bin/bash
 
 # Verify collections
 ansible-galaxy collection list
@@ -789,7 +789,7 @@ ansible-playbook test-playbook.yml
 ### 6. Document EE Changes in Git Tag Message
 
 ```bash
-git tag -a 25.01.04-0 -m "Production Release 1.0.0
+git tag -a 26.1.4-0 -m "Production Release 1.0.0
 
 Code Changes:
 - Add webserver role
@@ -807,10 +807,10 @@ Approved: CHG0001234"
 
 ```yaml
 # v1.x.x series
-image: "quay.io/myorg/automation-ee-v1:25.01.04-0"
+image: "quay.io/myorg/automation-ee-v1:26.1.4-0"
 
 # v2.x.x series (breaking changes)
-image: "quay.io/myorg/automation-ee-v2:25.02.01-0"
+image: "quay.io/myorg/automation-ee-v2:26.2.1-0"
 ```
 
 ### 8. Automate EE Builds via Tekton
@@ -841,8 +841,8 @@ execution_environment:
 ```yaml
 # BAD - Code and EE out of sync
 job_template:
-  scm_branch: "25.01.05-0"  # Code version 1.1.0
-  execution_environment: "automation-ee:25.01.04-0"  # EE version 1.0.0 ❌
+  scm_branch: "26.1.5-0"  # Code version 1.1.0
+  execution_environment: "automation-ee:26.1.4-0"  # EE version 1.0.0 ❌
 ```
 
 ### ❌ Not Pinning Collection Versions
@@ -857,10 +857,10 @@ collections:
 
 ```bash
 # BAD - Never do this!
-git tag -d 25.01.04-0
-git tag 25.01.04-0 <different-commit>
-podman tag automation-ee:25.01.04-0 <new-image>
-podman push --force automation-ee:25.01.04-0
+git tag -d 26.1.4-0
+git tag 26.1.4-0 <different-commit>
+podman tag automation-ee:26.1.4-0 <new-image>
+podman push --force automation-ee:26.1.4-0
 ```
 
 ### ❌ Not Tracking EE in Release Manifest
@@ -869,7 +869,7 @@ podman push --force automation-ee:25.01.04-0
 # BAD - Incomplete manifest
 components:
   automation_collection:
-    tag: "25.01.05-0"
+    tag: "26.1.5-0"
   # ❌ Missing EE version information
 ```
 
@@ -877,8 +877,8 @@ components:
 
 ```bash
 # BAD - Deploying without scanning
-ansible-builder build -t ee:25.01.04-0
-podman push ee:25.01.04-0
+ansible-builder build -t ee:26.1.4-0
+podman push ee:26.1.4-0
 # ❌ No SBOM, no vulnerability scan
 ```
 
@@ -887,6 +887,7 @@ podman push ee:25.01.04-0
 ## 📚 Related Documentation
 
 - [Git Workflow](./GIT-WORKFLOW.md) - Branching and versioning
+- [Versioning Rationale](./VERSIONING-RATIONALE.md) - Why CalVer over SemVer (pros/cons)
 - [Promotion Flow Diagrams](./diagrams/PROMOTION-FLOW.md) - Visual workflows
 - [CI/CD Guide](./CICD-GUIDE.md) - Build automation
 - [Release Manifests](./diagrams/REPOSITORY-STRUCTURE.md) - Manifest structure

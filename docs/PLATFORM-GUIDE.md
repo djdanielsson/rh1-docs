@@ -33,7 +33,7 @@ This platform implements a complete automation lifecycle using GitOps principles
 │                                   ▼                                         │
 │                        ┌──────────────────┐                                 │
 │                        │ RELEASE MANIFEST │ ◀── Locks all versions          │
-│                        │   (26.01.06-0)   │     (Playbook + Coll + EE +     │
+│                        │   (26.1.6-0)   │     (Playbook + Coll + EE +     │
 │                        └──────────────────┘      AAP Config SHAs/digests)   │
 │                                   │                                         │
 │            ┌──────────────────────┼──────────────────────┐                  │
@@ -55,7 +55,7 @@ This platform implements a complete automation lifecycle using GitOps principles
 | **Dual GitOps Loops** | ArgoCD manages platform resources; Tekton manages application configuration |
 | **Atomic Promotion** | All components (EE + CaC + Playbooks + Collections) promote together as one versioned unit |
 | **Release Manifest** | YAML file that version-locks all component Git SHAs and image digests |
-| **CalVer Versioning** | Releases use `YY.MM.DD-PATCH` format (e.g., `26.01.06-0`) |
+| **CalVer Versioning** | Releases use `YY.M.D-PATCH` format (e.g., `26.1.6-0`) |
 
 ### The Six Repositories
 
@@ -83,7 +83,7 @@ Before diving into the workflow, understand how EEs work across environments:
 | Environment | EE Tag | Behavior |
 |-------------|--------|----------|
 | **Dev** | `:dev` or `:latest` | Auto-rebuilt on every collection/EE repo merge. Uses `pull: always` to get latest. |
-| **QA/Prod** | `:YY.MM.DD-PATCH` (tag) | Locked to exact image tag in release manifest. Immutable. |
+| **QA/Prod** | `:YY.M.D-PATCH` (tag) | Locked to exact image tag in release manifest. Immutable. |
 
 **Why this matters**: Collections are bundled *inside* the EE at build time. When you change a collection, you must rebuild the EE before those changes are available in AAP. In Dev, this happens automatically. For releases, the manifest locks the exact digest.
 
@@ -381,7 +381,7 @@ git push origin main
 
 **For Dev environment**: EE is tagged `:dev` and auto-rebuilds. AAP pulls latest on each job run.
 
-**For Releases**: The release manifest will lock the specific `:YY.MM.DD-PATCH` tags.
+**For Releases**: The release manifest will lock the specific `:YY.M.D-PATCH` tags.
 
 📘 **More details**: [EE Versioning Strategy](./EE-VERSIONING-STRATEGY.md)
 
@@ -459,9 +459,9 @@ cd aap-config-as-code/inventory/group_vars/all
 
 # Execution Environment for Platform Database Configuration
 controller_execution_environments_plat_configure_database:
-  - name: "plat_database_admin_ee_26.01.06-0"
+  - name: "plat_database_admin_ee_26.1.6-0"
     description: "Platform database administration execution environment"
-    image: "quay.io/company/plat-ee@sha256:26.01.06-0"
+    image: "quay.io/company/plat-ee@sha256:26.1.6-0"
     pull: "missing"
     credential: "plat_registry_svc_builder_quay_io"
 
@@ -487,7 +487,7 @@ controller_templates_plat_configure_database:
     inventory: "plat_databases"                # → Defined in inventories.yml
     project: "plat_database_config_playbooks"  # → Defined above
     playbook: "playbooks/configure-database.yml" # → Playbook you created
-    execution_environment: "plat_database_admin_ee_26.01.06-0" # → Defined above
+    execution_environment: "plat_database_admin_ee_26.1.6-0" # → Defined above
     credentials:
       - "plat_machine_svc_ansible_linux"      # → Defined in credentials.yml
     organization: "platform"
@@ -609,9 +609,9 @@ awx job_templates launch "Deploy My App" --extra_vars '{"app_name": "test"}'
 When Dev testing passes, create a release manifest that locks all component versions.
 
 ```yaml
-# automation-release-manifest/releases/release-26.01.06-0.yaml
+# automation-release-manifest/releases/release-26.1.6-0.yaml
 ---
-version: "26.01.06-0"
+version: "26.1.6-0"
 created: "2026-01-06T10:00:00Z"
 components:
   aap_configuration:
@@ -643,11 +643,11 @@ Tag and push to trigger promotion to QA.
 cd automation-release-manifest
 
 # Commit the manifest
-git add releases/release-26.01.06-0.yaml
-git commit -m "Release 26.01.06-0"
+git add releases/release-26.1.6-0.yaml
+git commit -m "Release 26.1.6-0"
 
 # Tag triggers promotion
-git tag 26.01.06-0
+git tag 26.1.6-0
 git push origin main --tags
 
 # Tekton promotion pipeline runs:
@@ -804,21 +804,21 @@ pre-commit install
 pre-commit run --all-files
 
 # Create release
-tkn pipeline start create-release -p VERSION=26.01.06-0
+tkn pipeline start create-release -p VERSION=26.1.6-0
 
 # Promote to QA
-tkn pipeline start promote -p VERSION=26.01.06-0 -p FROM_ENVIRONMENT=dev -p TO_ENVIRONMENT=qa
+tkn pipeline start promote -p VERSION=26.1.6-0 -p FROM_ENVIRONMENT=dev -p TO_ENVIRONMENT=qa
 
 # Rollback
-tkn pipeline start rollback -p TARGET_VERSION=26.01.05-0 -p ENVIRONMENT=prod
+tkn pipeline start rollback -p TARGET_VERSION=26.1.5-0 -p ENVIRONMENT=prod
 ```
 
 ### Version Format
 
 ```
-YY.MM.DD-PATCH
-26.01.06-0  # January 6, 2026, initial release
-26.01.06-1  # January 6, 2026, hotfix
+YY.M.D-PATCH
+26.1.6-0  # January 6, 2026, initial release
+26.1.6-1  # January 6, 2026, hotfix
 ```
 
 ### Constitution Summary

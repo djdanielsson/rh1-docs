@@ -31,17 +31,17 @@ gitGraph
     checkout main
     merge feature/database-role tag: "Merge PR #124"
     commit id: "Update EE definition"
-    commit id: "Dev testing passed" tag: "25.01.05-0"
+    commit id: "Dev testing passed" tag: "26.1.5-0"
 
     checkout feature/monitoring
     commit id: "Fix molecule tests"
 
     checkout main
     merge feature/monitoring tag: "Merge PR #125"
-    commit id: "QA/Prod validated" tag: "25.01.06-0"
+    commit id: "QA/Prod validated" tag: "26.1.6-0"
 
     commit id: "Hotfix: update vars"
-    commit id: "Tested and validated" tag: "25.01.06-1"
+    commit id: "Tested and validated" tag: "26.1.6-1"
 ```
 
 ### Git Workflow Explanation
@@ -49,9 +49,9 @@ gitGraph
 **Trunk-Based Development Strategy:**
 - **main branch**: Single source of truth, always deployable
 - **Feature branches**: Short-lived, merge back to main frequently
-- **Git tags**: Immutable markers for environment promotion using **YY.MM.DD-PATCH** format
-  - Example: `25.01.05-0` for January 5, 2025 initial release
-  - Example: `25.01.05-1` for hotfix on same day
+- **Git tags**: Immutable markers for environment promotion using **YY.M.D-PATCH** format
+  - Example: `26.1.5-0` for January 5, 2025 initial release
+  - Example: `26.1.5-1` for hotfix on same day
   - Same tag promotes through all environments (dev → qa → prod)
 
 **Workflow Steps:**
@@ -63,14 +63,14 @@ gitGraph
 6. Code review and approval
 7. Merge to main
 8. Test in Dev environment (tracks main branch)
-9. Create release tag when Dev tests pass (e.g., `25.01.05-0`)
+9. Create release tag when Dev tests pass (e.g., `26.1.5-0`)
 10. Deploy to QA using same tag
 11. After QA validation, deploy to Prod using same tag
-12. For hotfixes, increment PATCH (e.g., `25.01.05-1`)
+12. For hotfixes, increment PATCH (e.g., `26.1.5-1`)
 
 **Key Benefits:**
 - Simplified Git management (no long-lived environment branches)
-- Immutable releases via CalVer tags (YY.MM.DD-PATCH)
+- Immutable releases via CalVer tags (YY.M.D-PATCH)
 - Clear promotion path: Dev (main) → QA (tag) → Prod (same tag)
 - Easy rollback (deploy previous tag via rollback script)
 - Date-based versions provide instant visibility into release timing
@@ -121,7 +121,7 @@ flowchart TD
     DevTest -->|No| Hotfix[Create Hotfix Branch]
     Hotfix --> DevLoop
 
-    DevTest -->|Yes| QATag[Create Release Tag<br/>YY.MM.DD-PATCH]
+    DevTest -->|Yes| QATag[Create Release Tag<br/>YY.M.D-PATCH]
     QATag --> QAReady([Ready for QA Deployment])
 
     style Code fill:#fff4e1
@@ -196,22 +196,22 @@ flowchart TD
 
     MainBranch --> DevSync[Dev AAP Project<br/>Syncs main branch]
     DevSync --> DevTest{Test in Dev?}
-    DevTest -->|Pass| CreateQATag[Create Git Tag<br/>25.01.05-0]
+    DevTest -->|Pass| CreateQATag[Create Git Tag<br/>26.1.5-0]
     DevTest -->|Fail| FeatureBranch
 
     CreateQATag --> BuildEE[Build Execution Environment<br/>ansible-builder]
-    BuildEE --> TagEE[Tag EE Image<br/>my-registry/my-ee:25.01.05-0]
+    BuildEE --> TagEE[Tag EE Image<br/>my-registry/my-ee:26.1.5-0]
     TagEE --> PushEE[Push to Container Registry<br/>Automation Hub/Quay]
 
-    PushEE --> UpdateCaC[Update CaC Repository<br/>Set code tag: 25.01.05-0<br/>Set EE tag: 25.01.05-0]
-    UpdateCaC --> TagCaC[Tag CaC Repository<br/>25.01.05-0]
+    PushEE --> UpdateCaC[Update CaC Repository<br/>Set code tag: 26.1.5-0<br/>Set EE tag: 26.1.5-0]
+    UpdateCaC --> TagCaC[Tag CaC Repository<br/>26.1.5-0]
     TagCaC --> ApplyCaC[Apply CaC to AAP<br/>infra.aap_configuration]
 
     ApplyCaC --> Phase4QA[Phase 4: Deploy to QA]
 
     Phase4QA --> WF_QA[QA Workflow Job Template]
-    WF_QA --> QA1[Sync QA Project<br/>Tag: 25.01.05-0]
-    QA1 --> QA2[Pull EE Image<br/>25.01.05-0]
+    WF_QA --> QA1[Sync QA Project<br/>Tag: 26.1.5-0]
+    QA1 --> QA2[Pull EE Image<br/>26.1.5-0]
     QA2 --> QA3[Run Job Template<br/>QA Inventory]
     QA3 --> QA4{QA Tests Pass?}
 
@@ -220,16 +220,16 @@ flowchart TD
 
     QA4 -->|Pass| QA_Approval[Approval Node<br/>QA Sign-off]
 
-    QA_Approval -->|Approved| PromoteProd[Promote to Prod<br/>Same tag: 25.01.05-0]
+    QA_Approval -->|Approved| PromoteProd[Promote to Prod<br/>Same tag: 26.1.5-0]
     QA_Approval -->|Rejected| FeatureBranch
 
-    PromoteProd --> ApplyProdCaC[Apply CaC to Prod AAP<br/>Tag: 25.01.05-0]
+    PromoteProd --> ApplyProdCaC[Apply CaC to Prod AAP<br/>Tag: 26.1.5-0]
 
     ApplyProdCaC --> Phase4Prod[Phase 4: Deploy to Prod]
 
     Phase4Prod --> WF_Prod[Prod Workflow Job Template]
-    WF_Prod --> Prod1[Sync Prod Project<br/>Tag: 25.01.05-0]
-    Prod1 --> Prod2[Pull EE Image<br/>25.01.05-0]
+    WF_Prod --> Prod1[Sync Prod Project<br/>Tag: 26.1.5-0]
+    Prod1 --> Prod2[Pull EE Image<br/>26.1.5-0]
     Prod2 --> Prod3[Run Job Template<br/>Prod Inventory]
     Prod3 --> Prod4{Prod Deploy Success?}
 
@@ -283,7 +283,7 @@ flowchart TD
 ### Phase 4: Deploy & Orchestrate (Green)
 - **Dev Environment**: Syncs main branch for continuous testing
 - **QA Environment**:
-  - Uses CalVer tagged releases (YY.MM.DD-PATCH, e.g., 25.01.05-0)
+  - Uses CalVer tagged releases (YY.M.D-PATCH, e.g., 26.1.5-0)
   - Synchronized EE images with same version tag
   - Approval gates
   - Automated rollback on failure
@@ -302,12 +302,12 @@ flowchart TD
 
 ## Key Synchronization Points
 
-1. **Git Tags**: Immutable release markers using YY.MM.DD-PATCH format (e.g., `25.01.05-0`)
-2. **EE Images**: Version-tagged to match Git tags (e.g., `myorg/ee:25.01.05-0`)
+1. **Git Tags**: Immutable release markers using YY.M.D-PATCH format (e.g., `26.1.5-0`)
+2. **EE Images**: Version-tagged to match Git tags (e.g., `myorg/ee:26.1.5-0`)
 3. **AAP Projects**: Point to specific Git tags (same tag used across all environments)
 4. **CaC Repository**:
    - Updated with code/EE tags when release is created
-   - Tagged with same release version (e.g., `25.01.05-0`)
+   - Tagged with same release version (e.g., `26.1.5-0`)
    - Applied to AAP to configure Projects, JTs, EEs for that release
    - Release manifest tracks which environments have deployed which version
 
@@ -323,19 +323,19 @@ flowchart TD
 
 ## CaC Release Workflow Details
 
-When a release tag is created (e.g., `25.01.05-0`):
+When a release tag is created (e.g., `26.1.5-0`):
 
-1. **Code Repository**: Tagged with `25.01.05-0`
-2. **EE Repository**: Built and tagged with `25.01.05-0`
+1. **Code Repository**: Tagged with `26.1.5-0`
+2. **EE Repository**: Built and tagged with `26.1.5-0`
 3. **CaC Repository**:
-   - Updated to reference code tag `25.01.05-0` and EE tag `25.01.05-0`
+   - Updated to reference code tag `26.1.5-0` and EE tag `26.1.5-0`
    - Committed to main branch
-   - Tagged with `25.01.05-0` (same version as code/EE)
+   - Tagged with `26.1.5-0` (same version as code/EE)
 4. **CaC Application**:
-   - Playbook runs using CaC tag `25.01.05-0`
+   - Playbook runs using CaC tag `26.1.5-0`
    - Applies configuration to AAP instance
-   - Configures Projects to use code tag `25.01.05-0`
-   - Configures Job Templates to use EE tag `25.01.05-0`
+   - Configures Projects to use code tag `26.1.5-0`
+   - Configures Job Templates to use EE tag `26.1.5-0`
 5. **Promotion**: Same tag deploys to dev → qa → prod (tracked in release manifest)
 
 This ensures all components (code, EE, CaC) are version-synchronized and applied atomically.
@@ -351,21 +351,21 @@ flowchart TD
     CaCReview --> CaCMerge[Merge to CaC main]
     CaCMerge --> CaCMain[(CaC main branch)]
 
-    CodeRelease[Code Release Tag Created<br/>25.01.05-0] --> UpdateCaC[Update CaC Repository]
-    EERelease[EE Image Tagged<br/>25.01.05-0] --> UpdateCaC
+    CodeRelease[Code Release Tag Created<br/>26.1.5-0] --> UpdateCaC[Update CaC Repository]
+    EERelease[EE Image Tagged<br/>26.1.5-0] --> UpdateCaC
 
-    UpdateCaC --> CaCUpdate[Update CaC Variables<br/>code_tag: 25.01.05-0<br/>ee_tag: 25.01.05-0<br/>ee_image: my-ee:25.01.05-0]
+    UpdateCaC --> CaCUpdate[Update CaC Variables<br/>code_tag: 26.1.5-0<br/>ee_tag: 26.1.5-0<br/>ee_image: my-ee:26.1.5-0]
     CaCUpdate --> CaCCommit[Commit to CaC main]
-    CaCCommit --> CaCTag[Tag CaC Repository<br/>25.01.05-0]
+    CaCCommit --> CaCTag[Tag CaC Repository<br/>26.1.5-0]
 
-    CaCTag --> CaCApply[Run CaC Playbook<br/>Checkout CaC tag: 25.01.05-0]
+    CaCTag --> CaCApply[Run CaC Playbook<br/>Checkout CaC tag: 26.1.5-0]
     CaCApply --> CaCConfig[Apply Configuration to AAP<br/>- Update Project SCM tag<br/>- Update JT EE reference<br/>- Update Workflow configs]
 
     CaCConfig --> AAPReady[AAP Configured<br/>Ready for Deployment]
 
     AAPReady --> WFTrigger[Workflow Triggered]
-    WFTrigger --> WFSync[Sync Project<br/>Uses code tag: 25.01.05-0]
-    WFSync --> WFEE[Pull EE Image<br/>Uses EE tag: 25.01.05-0]
+    WFTrigger --> WFSync[Sync Project<br/>Uses code tag: 26.1.5-0]
+    WFSync --> WFEE[Pull EE Image<br/>Uses EE tag: 26.1.5-0]
     WFEE --> WFDeploy[Deploy Application]
 
     style CaCDev fill:#f5e1ff
@@ -384,18 +384,18 @@ flowchart TD
 - CaC main branch contains the latest configuration definitions
 
 **On Release:**
-1. **Code Release**: Code repository tagged (e.g., `25.01.05-0`)
-2. **EE Release**: EE image built and tagged (e.g., `25.01.05-0`)
+1. **Code Release**: Code repository tagged (e.g., `26.1.5-0`)
+2. **EE Release**: EE image built and tagged (e.g., `26.1.5-0`)
 3. **CaC Update**:
    - CaC repository updated with new code/EE tags
    - Variables updated: `code_tag`, `ee_tag`, `ee_image`
    - Committed to CaC main branch
-4. **CaC Tag**: CaC repository tagged with same version (`25.01.05-0`)
+4. **CaC Tag**: CaC repository tagged with same version (`26.1.5-0`)
 5. **CaC Apply**:
-   - CaC playbook runs, checking out CaC tag `25.01.05-0`
+   - CaC playbook runs, checking out CaC tag `26.1.5-0`
    - Applies configuration to AAP instance
-   - Updates Projects to use code tag `25.01.05-0`
-   - Updates Job Templates to use EE tag `25.01.05-0`
+   - Updates Projects to use code tag `26.1.5-0`
+   - Updates Job Templates to use EE tag `26.1.5-0`
 6. **Deployment**: AAP Workflow runs using the configured tags
 7. **Promotion**: Tekton pipeline in automation-release-manifest handles promotion to QA/Prod
 

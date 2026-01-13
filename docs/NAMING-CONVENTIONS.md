@@ -512,7 +512,7 @@ group_vars/all/
 # Variable naming: controller_{resource_type}_{org}_{jt_suffix}
 # The suffix MUST include org abbreviation to guarantee uniqueness
 controller_execution_environments_eng_deploy_webapp:
-  - name: "eng_automation_ee_26.01.06-0"
+  - name: "eng_automation_ee_26.1.6-0"
     ...
 
 controller_projects_eng_deploy_webapp:
@@ -800,14 +800,14 @@ eng-full-deploy-workflow
 ### Execution Environments
 
 ```
-# Format: {aap_org_abbrev}_{purpose}_ee_{YY.MM.DD-PATCH}
+# Format: {aap_org_abbrev}_{purpose}_ee_{YY.M.D-PATCH}
 # All lowercase, underscores only
 
-eng_automation_ee_26.01.06-0
-plat_minimal_ee_26.01.06-0
-ops_security_scan_ee_26.01.06-0
-sec_network_automation_ee_26.01.06-0
-dev_database_admin_ee_26.01.06-0
+eng_automation_ee_26.1.6-0
+plat_minimal_ee_26.1.6-0
+ops_security_scan_ee_26.1.6-0
+sec_network_automation_ee_26.1.6-0
+dev_database_admin_ee_26.1.6-0
 
 # Purpose prefixes:
 # automation_     - General automation tasks
@@ -818,7 +818,7 @@ dev_database_admin_ee_26.01.06-0
 # monitoring_     - Monitoring tools
 # development_    - Development/testing tools
 
-# Tag format: YY.MM.DD-PATCH (Calendar Versioning)
+# Tag format: YY.M.D-PATCH (Calendar Versioning)
 # YY - Two-digit year (26 = 2026)
 # MM - Two-digit month (01 = January)
 # DD - Two-digit day (06 = 6th)
@@ -903,7 +903,7 @@ bugfix/ee-build-failure
 # Hotfixes (emergency production fixes)
 hotfix/security-patch
 hotfix/critical-bug
-release/25.01.05-0
+release/26.1.5-0
 
 # Not:
 new-feature
@@ -947,7 +947,7 @@ perf:     Performance improvement
 
 ### Git Tags
 
-**CalVer Format** (YY.MM.DD-PATCH):
+**CalVer Format** (YY.M.D-PATCH):
 
 This platform uses **Calendar Versioning** with a single tag promoted across all environments.
 
@@ -960,26 +960,26 @@ This platform uses **Calendar Versioning** with a single tag promoted across all
 
 **Tag Examples**:
 ```bash
-# Format: YY.MM.DD-PATCH
-26.01.06-0    # January 6, 2026 - Initial release
-26.01.06-1    # January 6, 2026 - Hotfix
-26.01.07-0    # January 7, 2026 - New release
-26.02.15-0    # February 15, 2026
+# Format: YY.M.D-PATCH
+26.1.6-0    # January 6, 2026 - Initial release
+26.1.6-1    # January 6, 2026 - Hotfix
+26.1.7-0    # January 7, 2026 - New release
+26.2.15-0    # February 15, 2026
 
 # Same tag promotes through all environments:
 # dev → qa → prod (tracked via release manifest)
 
 # Not:
 1.0.0         # Wrong format (SemVer)
-v26.01.06-0   # Wrong format (version prefix)
+v26.1.6-0   # Wrong format (version prefix)
 latest        # Not immutable
-26.1.6.0      # Missing leading zeros
+26.1.6.0      # Wrong separator (dot instead of hyphen before PATCH)
 ```
 
 **Tag Message Guidelines**:
 ```bash
 # Good - Detailed tag message
-git tag -a 25.01.05-0 -m "Release January 5, 2025
+git tag -a 26.1.5-0 -m "Release January 5, 2025
 
 Features:
 - Add webserver role with HA support
@@ -991,7 +991,7 @@ Testing:
 - Integration tests successful
 - Security scan clean
 
-Rollback: Revert to 25.01.04-0"
+Rollback: Revert to 26.1.4-0"
 ```
 
 **Tag Immutability Rules**:
@@ -999,7 +999,7 @@ Rollback: Revert to 25.01.04-0"
 - ❌ **NEVER** delete or move tags
 - ❌ **NEVER** force-push tags: `git push --force origin <tag>`
 - ❌ **NEVER** reuse tag names on different commits
-- ✅ For hotfixes, increment PATCH: `25.01.05-1`
+- ✅ For hotfixes, increment PATCH: `26.1.5-1`
 
 **See**: [GIT-WORKFLOW.md](./GIT-WORKFLOW.md) for complete workflow
 
@@ -1058,8 +1058,8 @@ controller_credentials_all:
 ```yaml
 # EE + Project + JT versioned together
 controller_execution_environments_eng_deploy_webapp:
-  - name: "eng_automation_ee_26.01.06-0"
-    image: "quay.io/company/eng-ee@sha256:26.01.06-0"
+  - name: "eng_automation_ee_26.1.6-0"
+    image: "quay.io/company/eng-ee@sha256:26.1.6-0"
     credential: "eng_registry_svc_builder_quay_io"
 
 controller_projects_eng_deploy_webapp:
@@ -1073,7 +1073,7 @@ controller_templates_eng_deploy_webapp:
     project: "eng_webapp_deploy_playbooks"
     inventory: "eng_webservers_app"               # Defined in inventories.yml
     playbook: "deploy-webapp.yml"
-    execution_environment: "eng_automation_ee_26.01.06-0"
+    execution_environment: "eng_automation_ee_26.1.6-0"
     credentials:
       - "eng_machine_ansible_linux"               # Defined in credentials.yml
 ```

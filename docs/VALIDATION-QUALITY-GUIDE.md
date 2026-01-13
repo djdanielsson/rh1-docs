@@ -86,13 +86,13 @@ automation-release-manifest/schemas/release-manifest-schema.json
 cd automation-release-manifest
 
 # Validate a single manifest
-./scripts/validate-manifest-schema.py releases/release-25.01.05-0.yaml
+./scripts/validate-manifest-schema.py releases/release-26.1.5-0.yaml
 
 # Validate with verbose output
-./scripts/validate-manifest-schema.py releases/release-25.01.05-0.yaml --verbose
+./scripts/validate-manifest-schema.py releases/release-26.1.5-0.yaml --verbose
 
 # Use custom schema
-./scripts/validate-manifest-schema.py releases/release-25.01.05-0.yaml --schema custom-schema.json
+./scripts/validate-manifest-schema.py releases/release-26.1.5-0.yaml --schema custom-schema.json
 ```
 
 #### Python API
@@ -101,7 +101,7 @@ cd automation-release-manifest
 from pathlib import Path
 from scripts.validate_manifest_schema import validate_manifest_file
 
-manifest_path = Path("releases/release-25.01.05-0.yaml")
+manifest_path = Path("releases/release-26.1.5-0.yaml")
 schema_path = Path("schemas/release-manifest-schema.json")
 
 success = validate_manifest_file(manifest_path, schema_path, verbose=True)
@@ -120,15 +120,15 @@ else:
 apiVersion: v1
 kind: ReleaseManifest
 metadata:
-  name: release-25.01.05-0      # Pattern: release-*
-  version: "25.01.05-0"         # CalVer YY.MM.DD-PATCH
+  name: release-26.1.5-0      # Pattern: release-*
+  version: "26.1.5-0"         # CalVer YY.M.D-PATCH
   environment: prod              # dev, qa, or prod
   createdAt: "2024-01-15T10:30:00Z"
 spec:
   components:
     - name: automation-collection
       type: collection
-      version: "25.01.05-0"
+      version: "26.1.5-0"
 ```
 
 #### Production-Specific Rules
@@ -145,7 +145,7 @@ For `environment: prod`, the validator checks:
 
 ```
 🔍 Validating Release Manifest
-Manifest: releases/release-25.01.05-0.yaml
+Manifest: releases/release-26.1.5-0.yaml
 Schema:   schemas/release-manifest-schema.json
 
 ✅ Schema validation passed
@@ -155,7 +155,7 @@ Schema:   schemas/release-manifest-schema.json
 
 ✅ Validation complete!
 Environment: prod
-Version:     25.01.05-0
+Version:     26.1.5-0
 Components:  3
 ```
 

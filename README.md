@@ -11,6 +11,7 @@ This is the project workspace containing all repositories and planning documenta
 - **[Constitution](./.specify/memory/constitution.md)** - Project principles (5 articles)
 - **[Specification](./.specify/memory/specification.md)** - Detailed requirements
 - **[Git Workflow](./docs/GIT-WORKFLOW.md)** - Branching, versioning, and promotion
+- **[Versioning Rationale](./docs/VERSIONING-RATIONALE.md)** - Why we use CalVer (pros/cons)
 
 ### 🛠️ Developer Resources
 - **[Ansible Best Practices](./docs/ANSIBLE-BEST-PRACTICES.md)** ⭐ Essential reading
@@ -93,7 +94,7 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 - **Repository**: https://github.com/djdanielsson/rh1-release-manifest.git
 - **Purpose**: Version-lock all components for atomic promotion between environments
 - **Contents**: Release manifests (YAML), Tekton pipelines, JSON schema
-- **Versioning**: CalVer YY.MM.DD.PATCH
+- **Versioning**: CalVer YY.M.D-PATCH
 - **Pipelines**: create-release, promote, rollback (all Tekton)
 - **[View README](./automation-release-manifest/README.md)**
 
@@ -174,8 +175,8 @@ git push
 ### Atomic Promotion
 ```bash
 # Create release manifest
-cat > automation-release-manifest/releases/26.01.06.0.yaml <<EOF
-version: "26.01.06.0"
+cat > automation-release-manifest/releases/26.1.6-0.yaml <<EOF
+version: "26.1.6-0"
 components:
   aap_configuration: "abc123..."
   execution_environment: "def456..."
@@ -183,8 +184,8 @@ components:
 EOF
 
 # Tag and push
-git tag 26.01.06.0
-git push origin 26.01.06.0
+git tag 26.1.6-0
+git push origin 26.1.6-0
 
 # Promotion pipeline deploys to QA
 ```

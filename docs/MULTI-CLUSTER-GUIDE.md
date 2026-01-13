@@ -186,8 +186,8 @@ spec:
 Modify release manifests for multi-cluster deployments:
 
 ```yaml
-# automation-release-manifest/releases/release-26.01.06-0.yaml
-version: "26.01.06-0"
+# automation-release-manifest/releases/release-26.1.6-0.yaml
+version: "26.1.6-0"
 metadata:
   release_date: "2026-01-06T10:00:00Z"
   approver: "Platform Team"
@@ -343,7 +343,7 @@ Implement failover procedures:
 #!/bin/bash
 PRIMARY_CLUSTER="prod-east"
 SECONDARY_CLUSTER="prod-west"
-RELEASE_TAG="26.01.06-0"
+RELEASE_TAG="26.1.6-0"
 
 echo "Initiating failover from $PRIMARY_CLUSTER to $SECONDARY_CLUSTER..."
 
