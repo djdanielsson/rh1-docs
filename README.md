@@ -4,12 +4,8 @@ This is the project workspace containing all repositories and planning documenta
 
 ## Quick Links
 
-### 🚀 Get Started
-- **[Platform Guide](./docs/PLATFORM-GUIDE.md)** - Complete platform overview and development workflow
-
 ### 📖 Core Documents
-- **[Constitution](./.specify/memory/constitution.md)** - Project principles (5 articles)
-- **[Specification](./.specify/memory/specification.md)** - Detailed requirements
+- **[Platform Guide](./docs/PLATFORM-GUIDE.md)** - Complete platform overview and development workflow
 - **[Git Workflow](./docs/GIT-WORKFLOW.md)** - Branching, versioning, and promotion
 - **[Versioning Rationale](./docs/VERSIONING-RATIONALE.md)** - Why we use CalVer (pros/cons)
 
@@ -35,10 +31,6 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 │   ├── GIT-WORKFLOW.md                  # Branching, versioning, promotion
 │   ├── CICD-GUIDE.md                    # CI/CD workflows
 │   └── ...                              # 12+ guides
-├── .specify/memory/                     # Project specifications
-│   ├── constitution.md                  # Project principles
-│   └── specification.md                 # Technical requirements
-├── tests/                               # Platform-wide tests
 │
 ├── cluster-config/                      # Git Repo 1: Platform GitOps
 ├── aap-config-as-code/                  # Git Repo 2: AAP Configuration
@@ -219,16 +211,6 @@ The platform is **production-ready** even without OpenShift or AAP running:
 ✅ **Learn Best Practices** - Comprehensive documentation
 
 See **[Platform Guide](./docs/PLATFORM-GUIDE.md)** for complete documentation.
-
-## 📊 Platform Statistics
-
-- **Documentation**: 13 comprehensive guides + 6 architecture diagrams
-- **Pre-commit Hooks**: 85 hooks across 6 repositories
-- **CI/CD Workflows**: 15 GitHub Actions workflows
-- **Test Coverage**: Unit, integration, Molecule, validation
-- **Example Content**: 4 roles, 2 modules, 4 filters, 2 lookups
-- **Standards**: Aligned with Red Hat CoP and ansible-lint rules
-- **Ready**: ✅ Production-ready, constitutional compliant
 
 ## External Resources
 
