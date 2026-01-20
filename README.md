@@ -2,6 +2,15 @@
 
 This is the project workspace containing all repositories and planning documentation for the Cloud-Native Ansible Lifecycle platform.
 
+## Organizational Scope
+
+> **Important**: This platform is designed from the perspective of a **team or group within a company**. Each team would have their own:
+> - Set of repositories (playbooks, collections, execution environments, AAP config, release manifests)
+> - AAP Organization to manage their automation
+> - Release lifecycle and version management
+> 
+> **Shared Resources**: The `cluster-config` repository (platform GitOps) and CI/CD pipelines themselves are typically managed centrally by a platform team, while application teams manage their own automation code and releases within their respective AAP organizations.
+
 ## Quick Links
 
 ### 📖 Core Documents

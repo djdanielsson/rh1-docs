@@ -4,6 +4,17 @@
 
 ---
 
+## Organizational Scope
+
+> **Important**: This platform is designed from the perspective of a **team or group within a company**. Each team would have their own:
+> - Set of repositories (playbooks, collections, execution environments, AAP config, release manifests)
+> - AAP Organization to manage their automation
+> - Release lifecycle and version management
+> 
+> **Shared Resources**: The `cluster-config` repository (platform GitOps) and CI/CD pipelines themselves are typically managed centrally by a platform team, while application teams manage their own automation code and releases within their respective AAP organizations.
+
+---
+
 ## Platform Overview
 
 This platform implements a complete automation lifecycle using GitOps principles. Everything flows through Git—from Ansible roles and collections to AAP configuration to Kubernetes infrastructure.
@@ -33,7 +44,7 @@ This platform implements a complete automation lifecycle using GitOps principles
 │                                   ▼                                         │
 │                        ┌──────────────────┐                                 │
 │                        │ RELEASE MANIFEST │ ◀── Locks all versions          │
-│                        │   (26.1.6-0)   │     (Playbook + Coll + EE +     │
+│                        │   (26.1.6-0)     │     (Playbook + Coll + EE +     │
 │                        └──────────────────┘      AAP Config SHAs/digests)   │
 │                                   │                                         │
 │            ┌──────────────────────┼──────────────────────┐                  │
