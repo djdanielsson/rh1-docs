@@ -108,6 +108,33 @@ The `dispatch` role automatically:
 3. Handles idempotency (only changes what's needed)
 4. Provides clear output of changes made
 
+### Dynamic Collection Management
+
+**Important Architectural Pattern**: Collections are managed dynamically, not built into Execution Environments.
+
+**Playbooks Repository** (`automation-playbooks`):
+```yaml
+# collections/requirements.yml or requirements.yml (root)
+collections:
+  - name: infra.aap_configuration
+    version: "2.9.0"  # Always pin to exact version
+  - name: myorg.custom_collection
+    version: "1.1.0"
+  - name: community.general
+    version: "8.1.0"
+```
+
+**Key Benefits**:
+- ✅ **No EE Rebuild Required**: Update collections without rebuilding EE
+- ✅ **Faster Iteration**: Collection updates take minutes, not hours
+- ✅ **Version Per Environment**: Different environments can use different collection versions via playbooks repo tags
+- ✅ **Easier Rollback**: Roll back playbooks repo to previous requirements.yml
+
+**AAP Behavior**:
+- AAP automatically reads `requirements.yml` from the playbooks project
+- Collections are installed at job runtime before playbook execution
+- Collections are cached per job but always pulled fresh based on requirements.yml
+
 ### Configuration Structure
 
 **Repository**: `aap-config-as-code`

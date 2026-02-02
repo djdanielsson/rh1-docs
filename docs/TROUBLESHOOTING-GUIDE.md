@@ -70,7 +70,8 @@ tkn pipelinerun describe <run-name> -n dev-tools
 **Solutions**:
 - **Authentication error**: Regenerate AAP API token, update secret
 - **Ansible syntax error**: Fix YAML in group_vars/
-- **Collection not found**: Update requirements.yml in CaC repo
+- **Collection not found**: Update requirements.yml in playbooks repo (not CaC repo)
+- **Collection version mismatch**: Check requirements.yml in playbooks project for correct version
 - **Timeout**: Increase task timeout or check AAP API responsiveness
 
 ### Promotion Pipeline Fails
@@ -162,6 +163,126 @@ oc get all -n <target-namespace>
 ---
 
 ## AAP Issues
+
+### Collection Not Found During Job Execution
+
+**Symptoms**: Job fails with "Collection not found" error
+
+**Diagnosis**:
+```bash
+# Check AAP project sync status
+curl -k https://aap.example.com/api/v2/projects/<project-id>/ \
+  -H "Authorization: Bearer $AAP_TOKEN" | jq .summary_fields.last_update_failed
+
+# Check if requirements.yml exists in project
+curl -k https://aap.example.com/api/v2/projects/<project-id>/playbooks/ \
+  -H "Authorization: Bearer $AAP_TOKEN" | grep requirements.yml
+
+# View job stdout to see collection installation
+curl -k https://aap.example.com/api/v2/jobs/<job-id>/stdout/ \
+  -H "Authorization: Bearer $AAP_TOKEN"
+```
+
+**Solutions**:
+- **Missing requirements.yml**: Add `requirements.yml` to playbooks repository root or `collections/` directory
+- **Wrong collection name**: Verify collection name format is `namespace.name` (e.g., `myorg.custom_collection`)
+- **Version not found**: Check that the specified version exists on Galaxy or automation hub
+- **Source not accessible**: Verify Galaxy URL or automation hub URL is correct and accessible
+- **Credentials missing**: Add Galaxy credentials or automation hub token to AAP organization
+- **Project not synced**: Manually sync the project or check `scm_update_on_launch: true`
+
+**Example requirements.yml structure**:
+```yaml
+# automation-playbooks/requirements.yml
+---
+collections:
+  - name: myorg.custom_collection
+    version: "1.1.0"
+    source: https://galaxy.ansible.com
+  
+  - name: community.general
+    version: "8.1.0"
+```
+
+### Collection Version Mismatch Between Environments
+
+**Symptoms**: Playbook works in Dev but fails in QA/Prod
+
+**Diagnosis**:
+```bash
+# Check which Git ref (branch/tag) each environment uses
+# Dev environment
+oc get project -n aap-dev -o yaml | grep scm_branch
+
+# QA environment  
+oc get project -n aap-qa -o yaml | grep scm_branch
+
+# Compare requirements.yml between environments
+git show main:requirements.yml
+git show 26.1.5-0:requirements.yml
+```
+
+**Solutions**:
+- **Different requirements.yml versions**: Ensure QA/Prod use tagged versions of playbooks repo with locked requirements.yml
+- **Dev uses main, QA uses tag**: This is expected - verify the tag has the correct requirements.yml
+- **Collection not published to Galaxy**: For custom collections, ensure they're published to Galaxy or automation hub before promoting to QA/Prod
+- **Missing collection in requirements.yml**: Add the collection to requirements.yml with version lock
+
+**Best Practice**:
+```yaml
+# Dev (main branch) - can use latest
+collections:
+  - name: myorg.custom_collection
+    version: "1.2.0"  # Latest development
+
+# QA/Prod (tagged) - locked versions
+collections:
+  - name: myorg.custom_collection
+    version: "1.1.0"  # Tested, stable
+```
+
+### EE Rebuild Not Required But Triggered Anyway
+
+**Symptoms**: EE rebuild pipeline runs when only collections changed
+
+**Diagnosis**:
+```bash
+# Check what changed in the commit
+git diff HEAD~1 HEAD --name-only
+
+# Should NOT trigger EE rebuild if only these changed:
+# - Collection repository files
+# - Playbooks repository requirements.yml
+```
+
+**Solutions**:
+- **Update CI/CD triggers**: Ensure EE build pipeline only triggers on:
+  - `automation-ee-example/requirements.txt` changes
+  - `automation-ee-example/bindep.txt` changes
+  - `automation-ee-example/execution-environment.yml` changes
+  - NOT on collection repository changes
+  - NOT on playbooks/requirements.yml changes
+
+**Correct Tekton EventListener filter**:
+```yaml
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: build-ee-listener
+spec:
+  triggers:
+    - name: build-ee-trigger
+      interceptors:
+        - ref:
+            name: "cel"
+          params:
+            - name: "filter"
+              value: >
+                (body.ref == 'refs/heads/main' && 
+                 (body.commits[0].modified.exists(f, f.startsWith('requirements.txt')) ||
+                  body.commits[0].modified.exists(f, f.startsWith('bindep.txt')) ||
+                  body.commits[0].modified.exists(f, f.startsWith('execution-environment.yml'))))
+```
 
 ### Jobs Failing with Authentication Errors
 

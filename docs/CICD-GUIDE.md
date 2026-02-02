@@ -25,11 +25,13 @@
 - ✅ PR validation and auto-labeling
 
 **Tekton Pipelines** (Building & Releasing):
-- 🏗️ Build collections
-- 🐳 Build execution environments
+- 🏗️ Build and publish collections (to Galaxy/automation hub)
+- 🐳 Build execution environments (base dependencies only)
 - 📦 Create release manifests
 - 🚀 Publish to registries (Galaxy, Quay.io)
 - ⬆️ Promote between environments
+
+**Note**: Collections are NOT built into EE images. They are published separately to Galaxy/automation hub and dynamically installed at job runtime via `requirements.yml` in the playbooks repository.
 
 ### Key Workflows Per Repository
 

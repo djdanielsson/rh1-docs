@@ -17,6 +17,7 @@ This is the project workspace containing all repositories and planning documenta
 - **[Platform Guide](./docs/PLATFORM-GUIDE.md)** - Complete platform overview and development workflow
 - **[Git Workflow](./docs/GIT-WORKFLOW.md)** - Branching, versioning, and promotion
 - **[Versioning Rationale](./docs/VERSIONING-RATIONALE.md)** - Why we use CalVer (pros/cons)
+- **[Dynamic Collections Migration](./docs/DYNAMIC-COLLECTIONS-MIGRATION.md)** - 🆕 New collection management approach
 
 ### 🛠️ Developer Resources
 - **[Ansible Best Practices](./docs/ANSIBLE-BEST-PRACTICES.md)** ⭐ Essential reading
@@ -70,8 +71,8 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 ### 3. automation-playbooks (Ansible Playbooks)
 - **Repository**: https://github.com/djdanielsson/rh1-automation-playbooks.git
 - **Purpose**: Centralized repository for Ansible playbooks called by AAP Job Templates
-- **Contents**: Playbook files that orchestrate role execution from collections
-- **Pattern**: Role-based playbooks with variable abstraction
+- **Contents**: Playbook files that orchestrate role execution from collections, requirements.yml for dynamic collection installation
+- **Pattern**: Role-based playbooks with variable abstraction and version-locked collections
 - **Managed by**: Tekton pipelines (via AAP projects)
 - **[View README](./automation-playbooks/README.md)**
 
@@ -85,10 +86,11 @@ rh1_ansible_code_lifecycle/              # Project workspace repo (docs + compon
 
 ### 5. automation-ee-example (Execution Environment)
 - **Repository**: https://github.com/djdanielsson/rh1-ee.git
-- **Purpose**: Custom Execution Environment container image
-- **Contents**: execution-environment.yml, requirements.yml/txt, bindep.txt
+- **Purpose**: Custom Execution Environment container image with base dependencies
+- **Contents**: execution-environment.yml, base requirements.yml/txt, bindep.txt
 - **Built with**: ansible-builder
 - **Base**: registry.redhat.io/ansible-automation-platform-26/ee-minimal-rhel9
+- **Note**: Collections are NOT built into the EE; they are dynamically pulled at runtime via playbooks repo requirements.yml
 - **[View README](./automation-ee-example/README.md)**
 
 ### 6. automation-release-manifest (Release Management)

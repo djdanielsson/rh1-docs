@@ -18,17 +18,29 @@ Execution Environments (EE) must be **version-locked** using **YY.M.D-PATCH** fo
 Code Tag: 26.1.5-0  →  EE Image: my-registry/my-ee:26.1.5-0
 ```
 
+### Important Architectural Change
+
+**Collections are NOT bundled inside the EE**. Instead, they are dynamically pulled at runtime using `requirements.yml` files in the playbooks repository. This means:
+
+- ✅ **EE rebuilds only when Python packages or system dependencies change**
+- ✅ **Collection updates don't require EE rebuilds**
+- ✅ **Significantly reduced EE release frequency**
+- ✅ **Faster iteration cycles for automation development**
+
 **Benefits**:
-- ✅ **Reproducibility**: Same code always runs with same dependencies
-- ✅ **Rollback Safety**: Roll back code + EE together as a unit
+- ✅ **Reproducibility**: Same runtime environment with dynamic collection management
+- ✅ **Rollback Safety**: Roll back EE + playbooks (with requirements.yml) together as a unit
 - ✅ **Version Clarity**: Easy to identify what's running where
 - ✅ **Immutability**: Tagged images never change
 - ✅ **Traceability**: Clear audit trail from code to runtime
+- ✅ **Reduced Overhead**: Fewer EE rebuilds means faster development cycles
 
 ---
 
 ## 📋 Table of Contents
 
+- [Overview](#overview)
+- [Dynamic Collection Management](#dynamic-collection-management)
 - [Version Tagging Convention](#version-tagging-convention)
 - [Build Process](#build-process)
 - [Promotion Workflow](#promotion-workflow)
@@ -38,6 +50,54 @@ Code Tag: 26.1.5-0  →  EE Image: my-registry/my-ee:26.1.5-0
 - [Rollback Strategy](#rollback-strategy)
 - [Best Practices](#best-practices)
 - [Anti-Patterns](#anti-patterns)
+
+---
+
+## 🔄 Dynamic Collection Management
+
+### How Collections Are Managed
+
+Collections are **NOT** built into the Execution Environment. Instead, they are:
+
+1. **Defined** in `automation-playbooks/requirements.yml`
+2. **Version-locked** with specific version numbers
+3. **Dynamically installed** by AAP at job runtime
+4. **Environment-specific** via playbooks repo branches/tags
+
+### Benefits of Dynamic Collection Management
+
+| Benefit | Description |
+|---------|-------------|
+| **Reduced EE Rebuilds** | Only rebuild when Python/system deps change, not for every collection update |
+| **Faster Iteration** | Update collections without waiting for EE rebuild pipeline |
+| **Better Separation** | Infrastructure (EE) separate from application logic (collections) |
+| **Easier Rollback** | Roll back playbooks repo to previous requirements.yml version |
+| **Version Flexibility** | Different environments can use different collection versions |
+
+### When to Rebuild the EE
+
+| Scenario | Rebuild EE? | Action |
+|----------|-------------|--------|
+| Update collection version | ❌ No | Update `playbooks/requirements.yml` only |
+| Add new collection | ❌ No | Add to `playbooks/requirements.yml` only |
+| Update Python package | ✅ Yes | Update `ee/requirements.txt` and rebuild |
+| Update system package | ✅ Yes | Update `ee/bindep.txt` and rebuild |
+| Update base image | ✅ Yes | Update `ee/execution-environment.yml` and rebuild |
+| Update Ansible core version | ✅ Yes | Update EE base image and rebuild |
+
+### Workflow Comparison
+
+**Old Way (Collections in EE)**:
+```
+Collection Update → EE Rebuild (15-20 min) → Push to Registry → Update CaC → Deploy
+```
+
+**New Way (Dynamic Collections)**:
+```
+Collection Update → Update playbooks/requirements.yml (1 min) → Deploy
+```
+
+**Time Saved**: 15-20 minutes per collection update
 
 ---
 
@@ -360,7 +420,7 @@ controller_execution_environments:
 
 ## 📦 Release Manifest Integration
 
-### Complete Release Manifest with EE Version
+### Complete Release Manifest with Dynamic Collections
 
 ```yaml
 # File: automation-release-manifest/releases/qa/release-26.1.5-0.yaml
@@ -376,6 +436,9 @@ components:
     ref_type: "tag"
     ref: "26.1.5-0"
     commit: "abc1234567890abcdef1234567890abcdef12345"
+    galaxy_version: "1.1.0"  # Published to Galaxy
+    galaxy_namespace: "myorg"
+    galaxy_name: "custom_collection"
 
   execution_environment:
     name: "automation-ee"
@@ -387,16 +450,12 @@ components:
     python_version: "3.11"
     ansible_core_version: "2.16.0"
 
-    # Track dependencies in EE
-    collections:
+    # Base collections in EE (infrastructure only)
+    base_collections:
       - name: "ansible.posix"
         version: "1.5.4"
       - name: "ansible.utils"
         version: "3.1.0"
-      - name: "community.general"
-        version: "8.1.0"
-      - name: "kubevirt.core"
-        version: "1.3.0"
 
     python_packages:
       - name: "jmespath"
@@ -408,11 +467,29 @@ components:
       - "git-2.43.0"
       - "openssh-clients-8.7"
 
+  playbooks:
+    repository: "github.com/myorg/automation-playbooks"
+    ref_type: "tag"
+    ref: "26.1.5-0"
+    commit: "def4567890abcdef1234567890abcdef45678901"
+    
+    # Collections dynamically installed from requirements.yml
+    collections_manifest:
+      source_file: "requirements.yml"
+      collections:
+        - name: "myorg.custom_collection"
+          version: "1.1.0"
+          source: "https://galaxy.ansible.com"
+        - name: "community.general"
+          version: "8.1.0"
+        - name: "community.postgresql"
+          version: "2.4.0"
+
   aap_configuration:
     repository: "github.com/myorg/aap-config-as-code"
     ref_type: "tag"
     ref: "26.1.5-0"
-    commit: "def4567890abcdef1234567890abcdef45678901"
+    commit: "ghi7890abcdef1234567890abcdef45678901234"
 
 testing:
   unit_tests: "passed"
@@ -428,8 +505,17 @@ approvals:
 artifacts:
   sbom: "https://artifactory.example.com/sbom/26.1.5-0.json"
   vulnerability_scan: "https://artifactory.example.com/scans/26.1.5-0.json"
-  collection_tarball: "https://artifactory.example.com/myorg-custom_collection-1.1.0.tar.gz"
+  collection_tarball: "https://galaxy.ansible.com/myorg/custom_collection/1.1.0"
 ```
+
+### Key Differences from Previous Approach
+
+| Aspect | Old (Collections in EE) | New (Dynamic Collections) |
+|--------|------------------------|---------------------------|
+| **EE Collections** | All collections listed | Only base infrastructure collections |
+| **Playbooks Section** | No collection info | Includes `collections_manifest` with requirements.yml content |
+| **Collection Tracking** | EE digest tracks everything | Separate tracking: EE for base, playbooks for app collections |
+| **Rollback** | Must match EE + playbooks | Playbooks ref includes requirements.yml version |
 
 ---
 
@@ -709,27 +795,42 @@ $ curl https://aap-prod.example.com/api/v2/job_templates/123/ | \
 
 ### 1. Always Pin Dependencies in EE Definition
 
+**Important**: The EE `requirements.yml` should now only contain **base collections** needed for the execution environment itself (e.g., infrastructure collections like `ansible.posix`). Application-specific collections are managed in the playbooks repository `requirements.yml`.
+
 ```yaml
 # File: automation-ee-example/requirements.yml
 
-# ✅ GOOD - Version pinned
+# ✅ GOOD - Base collections for EE infrastructure
 collections:
   - name: ansible.posix
     version: "1.5.4"
+  - name: ansible.utils
+    version: "3.1.0"
+  # Note: Application collections moved to playbooks repo
+
+# ❌ BAD - Application collections should not be here
+collections:
+  - name: myorg.custom_collection  # Move to playbooks repo
+    version: "1.1.0"
+```
+
+```yaml
+# File: automation-playbooks/requirements.yml
+
+# ✅ GOOD - Application collections with versions
+collections:
+  - name: myorg.custom_collection
+    version: "1.1.0"
   - name: community.general
     version: "8.1.0"
-  - name: kubevirt.core
-    version: "1.3.0"
-
-# ❌ BAD - No version specified
-collections:
-  - name: ansible.posix  # Will pull latest (non-reproducible)
+  - name: community.postgresql
+    version: "2.4.0"
 ```
 
 ```txt
 # File: automation-ee-example/requirements.txt
 
-# ✅ GOOD - Version pinned
+# ✅ GOOD - Version pinned Python packages
 jmespath==1.0.1
 netaddr==0.9.0
 python-dateutil==2.8.2
@@ -738,6 +839,15 @@ python-dateutil==2.8.2
 jmespath
 netaddr
 ```
+
+### Separation of Concerns
+
+| File | Purpose | Managed By | Rebuild Trigger |
+|------|---------|------------|-----------------|
+| `automation-ee-example/requirements.yml` | Base collections for EE infrastructure | Platform team | EE rebuild |
+| `automation-ee-example/requirements.txt` | Python packages | Platform team | EE rebuild |
+| `automation-ee-example/bindep.txt` | System packages | Platform team | EE rebuild |
+| `automation-playbooks/requirements.yml` | Application collections | App teams | No rebuild needed |
 
 ### 2. Use Image Digests in Production
 
@@ -795,9 +905,12 @@ Code Changes:
 - Add webserver role
 
 EE Changes:
-- Update ansible.posix to 1.5.4
-- Add kubevirt.core 1.3.0 collection
 - Update Python to 3.11
+- Add new system package libpq-dev
+
+Note: Collections now managed in playbooks repo requirements.yml
+- No collection changes in EE
+- Application collections dynamically installed at runtime
 
 Tested: All molecule tests pass
 Approved: CHG0001234"
@@ -849,8 +962,17 @@ job_template:
 
 ```yaml
 # BAD - Will break when collection updates
+# File: automation-playbooks/requirements.yml
 collections:
   - name: community.general  # No version = non-reproducible
+  - name: myorg.custom_collection  # No version = breaks rollback
+
+# ✅ GOOD - Version pinned in playbooks repo
+collections:
+  - name: community.general
+    version: "8.1.0"
+  - name: myorg.custom_collection
+    version: "1.1.0"
 ```
 
 ### ❌ Overwriting Version Tags
@@ -870,7 +992,33 @@ podman push --force automation-ee:26.1.4-0
 components:
   automation_collection:
     tag: "26.1.5-0"
+  playbooks:
+    tag: "26.1.5-0"
+    # ✅ Include collections requirements.yml reference
+    collections_manifest: "26.1.5-0"  # Points to requirements.yml version
   # ❌ Missing EE version information
+```
+
+### ❌ Mixing Collection Management Between EE and Playbooks
+
+```yaml
+# ❌ BAD - Application collections in EE requirements.yml
+# File: automation-ee-example/requirements.yml
+collections:
+  - name: myorg.custom_collection  # Should be in playbooks repo
+    version: "1.1.0"
+
+# ✅ GOOD - Only base collections in EE
+# File: automation-ee-example/requirements.yml
+collections:
+  - name: ansible.posix  # Infrastructure collection
+    version: "1.5.4"
+
+# ✅ GOOD - Application collections in playbooks repo
+# File: automation-playbooks/requirements.yml
+collections:
+  - name: myorg.custom_collection
+    version: "1.1.0"
 ```
 
 ### ❌ Skipping Security Scans

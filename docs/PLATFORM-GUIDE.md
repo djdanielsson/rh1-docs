@@ -27,10 +27,12 @@ This platform implements a complete automation lifecycle using GitOps principles
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   ┌──────────────┐         ┌──────────────┐         ┌──────────────┐        │
-│   │   PLAYBOOK   │────────▶│  COLLECTION  │────────▶│  EXECUTION   │        │
-│   │ (Orchestrate)│  uses   │   (Roles)    │ built   │  ENVIRONMENT │        │
-│   └──────────────┘         └──────────────┘  into   │   (Runtime)  │        │
-│          │                                          └──────────────┘        │
+│   │   PLAYBOOK   │────────▶│  COLLECTION  │         │  EXECUTION   │        │
+│   │ (Orchestrate)│  uses   │   (Roles)    │ pulled  │  ENVIRONMENT │        │
+│   │              │         │              │ at      │  (Runtime +  │        │
+│   │requirements  │────────▶│  (Published  │ runtime │   Base Deps) │        │
+│   │    .yml      │ version │   to PAH)    │         │              │        │
+│   └──────────────┘  locked └──────────────┘         └──────────────┘        │
 │          │                                                 │                │
 │          │  referenced by                                  │  registered    │
 │          │  project in AAP                                 │  in AAP        │
@@ -44,9 +46,9 @@ This platform implements a complete automation lifecycle using GitOps principles
 │                                   ▼                                         │
 │                        ┌──────────────────┐                                 │
 │                        │ RELEASE MANIFEST │ ◀── Locks all versions          │
-│                        │   (26.1.6-0)     │     (Playbook + Coll + EE +     │
-│                        └──────────────────┘      AAP Config SHAs/digests)   │
-│                                   │                                         │
+│                        │   (26.1.6-0)     │     (Playbook + requirements    │
+│                        └──────────────────┘      .yml + EE digest +         │
+│                                   │               AAP Config SHAs)          │
 │            ┌──────────────────────┼──────────────────────┐                  │
 │            ▼                      ▼                      ▼                  │
 │     ┌──────────────┐       ┌──────────────┐       ┌──────────────┐          │
@@ -130,6 +132,136 @@ This platform uses **dynamic inventory exclusively** for all automation:
 
 ---
 
+## Dynamic Collection Management in AAP
+
+### How AAP Handles Collections at Runtime
+
+When a job runs in AAP:
+
+1. **Project Sync**: AAP syncs the playbooks repository (specific branch/tag)
+2. **Collection Discovery**: AAP finds `requirements.yml` in the project root
+3. **Collection Installation**: AAP automatically installs collections before running the playbook
+4. **Execution**: Playbook runs with the specified collection versions
+
+### AAP Project Configuration
+
+```yaml
+# File: aap-config-as-code/group_vars/aap_dev/projects.yml
+
+controller_projects:
+  - name: "Automation Playbooks"
+    organization: "Platform"
+    scm_type: git
+    scm_url: "https://github.com/myorg/automation-playbooks.git"
+    scm_branch: main  # Dev uses main
+    scm_clean: true
+    scm_delete_on_update: true
+    scm_update_on_launch: true  # Always sync before job
+    credential: "GitHub Token"
+```
+
+### Requirements File in Playbooks Repo
+
+```yaml
+# File: automation-playbooks/requirements.yml
+---
+collections:
+  # from private automation hub
+  - name: myorg.internal_collection
+    version: "2.0.0"
+  
+  - name: community.general
+    version: "8.1.0"
+  
+  - name: community.postgresql
+    version: "2.4.0"
+  
+  - name: ansible.posix
+    version: "1.5.4"
+```
+
+### Version Management Per Environment
+
+Different environments can use different collection versions by using separate branches or tags:
+
+```yaml
+# Dev environment (main branch)
+# automation-playbooks/requirements.yml
+collections:
+  - name: myorg.custom_collection
+    version: "1.2.0"  # Latest development version
+
+# QA environment (tag: 26.1.6-0)
+# automation-playbooks/requirements.yml
+collections:
+  - name: myorg.custom_collection
+    version: "1.1.0"  # Stable tested version
+
+# Prod environment (tag: 26.1.5-0)
+# automation-playbooks/requirements.yml
+collections:
+  - name: myorg.custom_collection
+    version: "1.0.0"  # Production version
+```
+
+### AAP Job Template Configuration
+
+```yaml
+# File: aap-config-as-code/group_vars/aap_qa/job_templates.yml
+
+controller_templates:
+  - name: "Deploy Webserver - QA"
+    organization: "Platform"
+    inventory: "QA Infrastructure"
+    project: "Automation Playbooks"
+    
+    # Lock to specific tag for QA
+    scm_branch: "26.1.6-0"
+    
+    # EE contains base dependencies only
+    execution_environment: "Platform EE - 26.1.6-0"
+    
+    playbook: "playbooks/deploy-webserver.yml"
+    
+    # Collections installed from requirements.yml at runtime
+    # No need to specify collections here
+```
+
+### Collection Installation Location
+
+AAP installs collections in the job's isolated environment:
+
+```
+/tmp/awx_<job_id>_<random>/
+├── project/              # Playbooks repository
+│   ├── playbooks/
+│   ├── requirements.yml  # Collection requirements
+│   └── ...
+├── collections/          # Installed collections (at runtime)
+│   └── ansible_collections/
+│       ├── myorg/
+│       │   └── custom_collection/
+│       ├── community/
+│       │   ├── general/
+│       │   └── postgresql/
+│       └── ansible/
+│           └── posix/
+└── ...
+```
+
+### Benefits Summary
+
+| Aspect | Old Way (Collections in EE) | New Way (Dynamic Collections) |
+|--------|----------------------------|------------------------------|
+| **Collection Update** | Rebuild EE (15-20 min) | Update requirements.yml (1 min) |
+| **Version Per Environment** | Different EE images | Same EE, different requirements.yml |
+| **Rollback** | Change EE + playbooks | Change playbooks tag only |
+| **Development Speed** | Slow (wait for EE rebuild) | Fast (immediate) |
+| **EE Rebuild Frequency** | Every collection update | Only for Python/system deps |
+| **Complexity** | Higher (manage many EE versions) | Lower (fewer EE versions) |
+
+---
+
 ## Building New Automation
 
 This section walks through the complete lifecycle of creating new automation and moving it through all environments.
@@ -140,14 +272,21 @@ Before diving into the workflow, understand how EEs work across environments:
 
 | Environment | EE Tag | Behavior |
 |-------------|--------|----------|
-| **Dev** | `:dev` or `:latest` | Auto-rebuilt on every collection/EE repo merge. Uses `pull: always` to get latest. |
+| **Dev** | `:dev` or `:latest` | Rebuilt when base dependencies or system packages change. Uses `pull: always` to get latest. |
 | **QA/Prod** | `:YY.M.D-PATCH` (tag) | Locked to exact image tag in release manifest. Immutable. |
 
-**Why this matters**: Collections are bundled *inside* the EE at build time. When you change a collection, you must rebuild the EE before those changes are available in AAP. In Dev, this happens automatically. For releases, the manifest locks the exact digest.
+**Important Change**: Collections are **NOT** bundled inside the EE. Instead, they are dynamically pulled at runtime using `requirements.yml` files in the playbooks repository. This significantly reduces the frequency of EE rebuilds.
 
 ```
-Collection Change → EE Rebuild → New EE Image Available → CaC references new EE
+Collection Change → Update playbooks repo requirements.yml → AAP pulls collections at job runtime
+EE Rebuild → Only when Python dependencies or system packages change
 ```
+
+**When to rebuild the EE**:
+- ✅ Python package dependencies change (requirements.txt)
+- ✅ System package dependencies change (bindep.txt)
+- ✅ Base image updates
+- ❌ Collection versions change (handled by requirements.yml in playbooks repo)
 
 ---
 
@@ -411,15 +550,56 @@ pre-commit run --all-files
 
 ---
 
-### Step 6: Update Execution Environment
+### Step 6: Update Playbooks Repository Requirements
 
-Since collections are bundled *inside* the EE, you must rebuild it after collection changes.
+Collections are dynamically pulled at runtime, so you need to update the `requirements.yml` file in the playbooks repository.
+
+```bash
+cd automation-playbooks
+
+# Add or update collection version in requirements.yml
+vi requirements.yml
+```
+
+```yaml
+# requirements.yml
+---
+collections:
+  # Your custom collection
+  - name: myorg.custom_collection
+    version: "1.1.0"  # Lock to specific version
+  
+  # Community collections
+  - name: ansible.posix
+    version: "1.5.4"
+  
+  - name: community.general
+    version: "8.1.0"
+```
+
+**Version Locking Best Practice**: Always pin to exact versions for reproducibility.
+
+```bash
+# Commit and push the requirements.yml change
+git commit -am "Add myorg.custom_collection 1.1.0 with my_new_role"
+git push origin main
+```
+
+**Benefits of this approach**:
+- ✅ No EE rebuild required for collection changes
+- ✅ Faster iteration cycle
+- ✅ Fewer EE releases to manage
+- ✅ Collections version-locked per environment via playbooks repo
+- ✅ AAP automatically installs collections before job execution
+
+### Step 6b: Update Execution Environment (Only If Needed)
+
+**Only rebuild the EE if you added Python or system package dependencies** (not for collection changes).
 
 ```bash
 cd automation-ee-example
 
-# The EE pulls your collection via requirements.yml
-# If you added new Python deps in your role, add them:
+# If you added new Python deps in your role:
 vi requirements.txt
 # Add: my-new-package>=1.0.0
 
@@ -427,19 +607,12 @@ vi requirements.txt
 vi bindep.txt
 # Add: my-system-package
 
-# Commit and push to trigger EE rebuild
-git commit -am "Update deps for my_new_role"
+# Commit and push ONLY if dependencies changed
+git commit -am "Add Python deps for my_new_role"
 git push origin main
-
-# Tekton automatically builds new EE with:
-# - Your updated collection (from main branch)
-# - Any new dependencies
-# - Tagged as :dev for development use
 ```
 
-**For Dev environment**: EE is tagged `:dev` and auto-rebuilds. AAP pulls latest on each job run.
-
-**For Releases**: The release manifest will lock the specific `:YY.M.D-PATCH` tags.
+**Note**: The EE `requirements.yml` file should now only contain base collections needed for the execution environment itself (e.g., `ansible.posix` for core functionality), not application-specific collections. Application collections are managed in the playbooks repository.
 
 📘 **More details**: [EE Versioning Strategy](./EE-VERSIONING-STRATEGY.md)
 
@@ -447,10 +620,15 @@ git push origin main
 
 ### Step 7: Create or Update Playbook
 
-If you need a new playbook to orchestrate your role, create it in `automation-playbooks`.
+If you need a new playbook to orchestrate your role, create it in `automation-playbooks`. Ensure the playbook repo has a `requirements.yml` file that specifies all collections needed.
 
 ```bash
 cd automation-playbooks
+
+# Ensure requirements.yml is up to date
+cat requirements.yml
+# Should contain your collection with version lock
+
 vi playbooks/deploy-myapp.yml
 ```
 
@@ -618,21 +796,29 @@ gh pr create --title "Add my_new_role" --body "Adds deployment automation for XY
 After PR approvals and merges, changes automatically deploy to the Dev environment.
 
 ```
-Collection PR Merged → EE Rebuild Triggered → New :dev image pushed
+Collection PR Merged → Collection published to Galaxy
+                                │
+Playbooks PR Merged → requirements.yml updated → AAP Project syncs
                                                       │
-CaC PR Merged → Tekton Pipeline → Dev AAP Updated ◀───┘
-                                        │
-                                        ▼
-                              Ready for Dev Testing
+                                                      ▼
+                              AAP installs collections at job runtime
+                                                      │
+CaC PR Merged (if needed) → Tekton Pipeline → Dev AAP Updated
+                                                      │
+                                                      ▼
+                                            Ready for Dev Testing
 ```
 
 **Order matters for merging:**
-1. First: Collection changes (triggers EE rebuild)
-2. Second: EE changes (if any direct changes needed)
-3. Third: Playbook changes
-4. Fourth: Config-as-Code changes (references the new EE)
+1. First: Collection changes (published to Galaxy or private automation hub)
+2. Second: Playbooks changes (update requirements.yml with new collection version)
+3. Third: EE changes (only if Python/system dependencies changed)
+4. Fourth: Config-as-Code changes (only if Job Template config changed)
 
-The inner loop is fast—typically under 5 minutes from final merge to full deployment.
+**Key Benefits**:
+- Collections are dynamically installed at job runtime
+- No EE rebuild required for collection updates
+- Faster iteration cycle (typically under 3 minutes from final merge to ready)
 
 📘 **More details**: [GitOps Loops](./diagrams/GITOPS-LOOPS.md)
 
@@ -682,12 +868,20 @@ components:
   playbooks:
     repository: "https://github.com/djdanielsson/rh1-automation-playbooks.git"
     ref: "stu901vwx234..."
+    # Collections are tracked via requirements.yml in playbooks repo
+    collections_ref: "stu901vwx234..."  # Same as playbooks ref
   collections:
     repository: "https://github.com/djdanielsson/rh1-custom-collection.git"
     ref: "mno345pqr678..."
+    # Published version
+    galaxy_version: "1.1.0"
 ```
 
-**Key**: Use `@sha256:...` digest for EE, not `:dev` tag. This ensures QA/Prod get the exact same image.
+**Key Changes**: 
+- Collections are NOT in the EE digest
+- Collections tracked via `requirements.yml` in playbooks repository
+- Both `playbooks.ref` and `playbooks.collections_ref` point to the same commit
+- Custom collections track both repo ref and Galaxy published version
 
 📘 **More details**: [Promotion Flow](./diagrams/PROMOTION-FLOW.md) | [automation-release-manifest README](../automation-release-manifest/README.md)
 
