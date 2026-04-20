@@ -208,4 +208,8 @@ automation-collection-example
 automation-ee-example
 automation-release-manifest
 cluster-config
-automation-playbooks
+automation-playbooks.env
+.env.*
+credentials.json
+.env.local
+.env.production
