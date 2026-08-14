@@ -420,7 +420,7 @@ git tag 26.1.5-1
 required_pull_request_reviews:
   required_approving_review_count: 1
 required_status_checks:
-  contexts: ["pre-commit", "ansible-lint", "molecule-test"]
+  contexts: ["pre-commit", "ansible-lint", "molecule-test", "apme-policy-check"]
 allow_force_pushes: false
 allow_deletions: false
 ```

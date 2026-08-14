@@ -545,26 +545,45 @@ Consider:
 
 ### HashiCorp Vault Integration
 
-Each cluster connects to the same Vault instance:
+Each cluster connects to the same Vault instance via the `vault-rh1` ClusterSecretStore:
 
 ```yaml
-# ExternalSecret (per cluster)
-apiVersion: external-secrets.io/v1beta1
+# ClusterSecretStore (cluster-wide)
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: vault-rh1
+spec:
+  provider:
+    vault:
+      server: "http://vault.hashicorp-vault.svc:8200"
+      path: secret
+      version: v2
+      auth:
+        kubernetes:
+          mountPath: kubernetes
+          role: external-secrets
+          serviceAccountRef:
+            name: external-secrets
+            namespace: external-secrets-operator
+
+# ExternalSecret (per namespace)
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
-  name: aap-credentials
+  name: aap-admin-password
   namespace: aap-prod
 spec:
   secretStoreRef:
-    name: vault-backend
+    name: vault-rh1
     kind: ClusterSecretStore
   target:
-    name: aap-credentials
+    name: aap-admin-password
   data:
-    - secretKey: admin-password
+    - secretKey: password
       remoteRef:
-        key: secret/data/aap-prod
-        property: admin-password
+        key: rh1/platform/aap/prod/admin-password
+        property: password
 ```
 
 ### Cluster-Specific Secrets
@@ -573,11 +592,12 @@ For cluster-specific secrets (API endpoints, etc.):
 
 ```yaml
 # Vault path structure
-secret/
-├── aap-prod/
-│   ├── common/          # Shared across all clusters
-│   ├── us-east/         # US-East specific
-│   └── us-west/         # US-West specific
+secret/data/rh1/
+├── platform/          # Shared platform secrets (signing, CI, AAP admin)
+├── automation/        # AAP runtime secrets (OIDC JIT access)
+└── clusters/          # Per-cluster overrides (future)
+    ├── us-east/
+    └── us-west/
 ```
 
 ---

@@ -16,9 +16,18 @@ The platform implements a comprehensive zero-trust security model based on Artic
 - CI/CD fails immediately if secret detected
 
 ### Secret Storage
-- All secrets in OCP Secret objects (encrypted at rest)
+- **HashiCorp Vault** is the primary secrets backend (KV v2, path prefix `rh1/`)
+- External Secrets Operator syncs Vault secrets into OCP Secret objects (encrypted at rest)
 - AAP Credentials reference secrets by name, never contain values
 - Tekton pipelines mount secrets as files (not environment variables)
+- **AAP OIDC JIT**: Job templates use short-lived Vault tokens via AAP OIDC workload identity—no long-lived `VAULT_TOKEN` credentials
+
+### Policy Enforcement (APME)
+- **APME** scans Ansible content on every PR before merge (Tekton final gate)
+- Organization policies in `rh1-cluster-config/applications/apme/policies/`
+- Violations at `error` severity block merge; see [APME-GUIDE.md](./APME-GUIDE.md)
+
+See [VAULT-GUIDE.md](./VAULT-GUIDE.md) for Vault bootstrap, ESO integration, and OIDC setup.
 
 ### Secret Rotation
 ```bash
@@ -125,6 +134,7 @@ The platform implements multiple layers of security:
 - Secret scanning in CI/CD
 - Image vulnerability scanning
 - SBOM generation and validation
+- **Content signature signing and verification** (Cosign + Hub GPG)
 - Registry access controls
 
 ### Layer 3: Application Security
@@ -138,14 +148,15 @@ The platform implements multiple layers of security:
 - Pre-commit secret detection
 - PR validation gates
 - Release manifest verification
+- **Cosign-signed release manifests** (tamper-evident atomic promotions)
 
 ## Compliance Validation
 
 ### Automated Security Checks
 - **Pre-commit**: Secret detection, syntax validation
 - **PR Validation**: Security scanning, dependency checks
-- **Release Validation**: Vulnerability scanning, compliance verification
-- **Runtime**: Continuous monitoring and alerting
+- **Release Validation**: Vulnerability scanning, compliance verification, **content signature verification**
+- **Runtime**: Continuous monitoring and alerting; **AAP galaxy/EE signature enforcement**
 
 ### Manual Security Reviews
 - **Architecture Review**: Security layer validation

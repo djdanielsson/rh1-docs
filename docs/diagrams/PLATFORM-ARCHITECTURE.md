@@ -331,6 +331,8 @@ graph TB
         SBOM[SBOM Generation<br/>Component Tracking]
         VULN[Vulnerability Scanning<br/>Grype/Trivy]
         SIGN[Image Signing<br/>Cosign]
+        COLSIGN[Collection Signing<br/>Hub GPG]
+        MANIFESTSIGN[Manifest Signing<br/>Cosign sign-blob]
     end
 
     subgraph "Layer 3: Deploy Time"
@@ -340,7 +342,7 @@ graph TB
     end
 
     subgraph "Layer 4: Runtime"
-        VAULT[Vault Integration<br/>Secret Management]
+        VAULT[Vault KV + OIDC JIT<br/>ESO + AAP Workload Identity]
         AUDIT[Audit Logging<br/>Compliance]
         MONITOR[Security Monitoring<br/>Alerts]
     end
@@ -350,7 +352,9 @@ graph TB
     BRANCH --> SBOM
     SBOM --> VULN
     VULN --> SIGN
-    SIGN --> POLICY
+    SIGN --> COLSIGN
+    COLSIGN --> MANIFESTSIGN
+    MANIFESTSIGN --> POLICY
     POLICY --> RBAC
     RBAC --> NETPOL
     NETPOL --> VAULT
@@ -386,7 +390,7 @@ graph LR
     end
 
     subgraph "Article V: Zero-Trust Security"
-        A5[No hardcoded secrets<br/>SBOM tracking<br/>Vulnerability scanning]
+        A5[No hardcoded secrets<br/>SBOM tracking<br/>Vulnerability scanning<br/>Content signatures]
     end
 
     A1 -->|Enables| A3
@@ -430,10 +434,12 @@ graph TB
             EE_P[Execution Environments]
         end
 
-        subgraph "Namespace: shared-services"
-            PG[PostgreSQL Operator]
-            REDIS[Redis Operator]
-            VAULT[Vault]
+        subgraph "Namespace: hashicorp-vault"
+            VAULT[HashiCorp Vault<br/>KV v2 + Audit]
+        end
+
+        subgraph "Namespace: external-secrets-operator"
+            ESO[External Secrets Operator]
         end
     end
 
@@ -444,17 +450,38 @@ graph TB
     TEK -->|Builds for| EE_Q
     TEK -->|Builds for| EE_P
 
-    AAP_D -.->|Uses| PG
-    AAP_Q -.->|Uses| PG
-    AAP_P -.->|Uses| PG
-    AAP_D -.->|Uses| VAULT
-    AAP_Q -.->|Uses| VAULT
-    AAP_P -.->|Uses| VAULT
+    AAP_D -.->|OIDC JIT| VAULT
+    AAP_Q -.->|OIDC JIT| VAULT
+    AAP_P -.->|OIDC JIT| VAULT
+    ESO -->|Syncs secrets| AAP_D
+    ESO -->|Syncs secrets| AAP_Q
+    ESO -->|Syncs secrets| AAP_P
 
     style ARGO fill:#ff6b6b
     style TEK fill:#4ecdc4
     style AAP_P fill:#ffe66d
     style VAULT fill:#95e1d3
+```
+
+---
+
+## AAP OIDC Just-in-Time Vault Access
+
+```mermaid
+sequenceDiagram
+    participant JT as Job Template
+    participant AAP as AAP Controller
+    participant OIDC as AAP OIDC /o
+    participant Vault as HashiCorp Vault
+
+    JT->>AAP: Launch job
+    AAP->>OIDC: Request workload JWT
+    OIDC-->>AAP: Short-lived JWT
+    AAP->>Vault: auth/jwt/login (bound_claims)
+    Vault-->>AAP: Scoped Vault token (TTL)
+    AAP->>Vault: Read secret path
+    Vault-->>AAP: Secret value
+    AAP->>JT: Inject via credential/extra_vars
 ```
 
 ---
