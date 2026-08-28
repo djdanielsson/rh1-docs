@@ -608,8 +608,11 @@ gh pr create --title "Add my_new_role" --body "Adds deployment automation for XY
 3. ✅ molecule test (all scenarios)
 4. ✅ Secret scanning
 5. ✅ Collection build verification
+6. ✅ **APME policy check** (final gate — Tekton/PAC, in-cluster APME service)
 
-📘 **More details**: [CI/CD Guide](./CICD-GUIDE.md) | [Git Workflow](./GIT-WORKFLOW.md)
+APME runs last after functional tests pass. It enforces organization policy (security, FQCN, OPA rules) and blocks merge on violations.
+
+📘 **More details**: [CI/CD Guide](./CICD-GUIDE.md) | [Git Workflow](./GIT-WORKFLOW.md) | [APME Guide](./APME-GUIDE.md)
 
 ---
 

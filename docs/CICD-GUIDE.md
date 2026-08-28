@@ -38,8 +38,8 @@
 | **cluster-config** | 5 | Kubernetes validation, ArgoCD checks, Tekton validation |
 | **aap-config-as-code** | 5 | Ansible-lint, playbook syntax, idempotency |
 | **automation-collection** | 5 | Sanity tests, unit tests, integration tests, Molecule |
-| **automation-ee** | 4 | EE validation, SBOM generation, security scanning |
-| **automation-release-manifest** | 3 | Manifest validation, semver checks |
+| **automation-ee** | 4 | EE validation, SBOM generation, security scanning, **Cosign image signing** |
+| **automation-release-manifest** | 3 | Manifest validation, semver checks, **Cosign manifest verification** |
 
 ### Quick Commands
 
@@ -272,6 +272,44 @@ on: workflow_dispatch
 - Runs playbook with dispatch role
 
 **Note**: In production, use Tekton pipelines triggered by webhooks.
+
+### Content Signature Tekton Tasks
+
+Shared signing tasks live in `rh1-cluster-config/tekton-tasks/`:
+
+| Task | Used by |
+|------|---------|
+| `cosign-sign-image` | `rh1-ee` release pipeline |
+| `cosign-verify-image` | `rh1-release-manifest` release-create |
+| `cosign-sign-blob` | `rh1-release-manifest` release-create |
+| `cosign-verify-blob` | `rh1-release-manifest` state-qa / state-prod |
+| `ansible-galaxy-collection-verify` | `rh1-custom-collection` release pipeline |
+| `skopeo-inspect-digest` | `rh1-ee` / `rh1-release-manifest` |
+
+See [CONTENT-SIGNING.md](./CONTENT-SIGNING.md).
+
+### APME Policy Tekton Tasks
+
+APME runs as the **final PR quality gate** on Ansible content repos via Pipelines as Code:
+
+| Task | Used by |
+|------|---------|
+| `apme-policy-check` | `rh1-custom-collection` PR pipeline (after molecule) |
+| `apme-policy-check` | `rh1-automation-playbooks` PR pipeline |
+
+Organization policies are synced from `rh1-cluster-config/applications/apme/policies/` into ConfigMap `apme-org-policies` in each CI namespace.
+
+See [APME-GUIDE.md](./APME-GUIDE.md).
+
+### GitHub Actions vs Tekton
+
+| Check | Runner | Purpose |
+|-------|--------|---------|
+| ansible-lint, unit tests | GitHub Actions | Fast feedback |
+| molecule, build | Tekton/PAC | Cluster-native integration tests |
+| **apme-policy-check** | Tekton/PAC only | Org policy enforcement (no duplicate scan in GHA) |
+
+Configure branch protection to require the PAC check `apme-policy-check` in addition to GitHub Actions checks.
 
 ### 3. automation-collection-example Workflows
 

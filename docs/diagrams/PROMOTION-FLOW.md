@@ -400,6 +400,7 @@ graph TB
         G5[Full Test Suite Pass]
         G6[Integration Tests Pass]
         G7[Security Scan Pass]
+        G7B[Content Signatures Verified]
         G8[Performance Tests Pass]
         G9[QA Sign-off]
         G10[CAB Approval]
@@ -415,12 +416,14 @@ graph TB
     PROMOTE_QA --> G5
     G5 --> G6
     G6 --> G7
-    G7 --> G8
+    G7 --> G7B
+    G7B --> G8
     G8 --> G9
     G9 --> G10
     G10 --> G11
     G11 --> PROMOTE_PROD[Promote to Prod]
 
+    style G7B fill:#ffd93d
     style G4 fill:#ffd93d
     style G10 fill:#ff6b6b
     style G11 fill:#95e1d3

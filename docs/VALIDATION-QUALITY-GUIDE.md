@@ -55,6 +55,28 @@ Quality and security validation ensures **Constitutional Article IV: Production-
 | **Safety** | Python security checks | Python packages |
 | **pip-audit** | Python dependency audit | Python packages |
 | **Dependabot** | Automated dependency updates | GitHub repositories |
+| **APME** | Organization policy enforcement on Ansible content | Collection, playbooks (PR gate) |
+
+---
+
+## APME Policy Validation
+
+APME (Ansible Policy & Modernization Engine) is the **final PR validation layer** after lint, molecule, and build checks. It runs on the in-cluster APME service via Tekton.
+
+### What APME checks
+
+- Security patterns (credentials, `no_log`, Gitleaks)
+- Ansible standards (FQCN, deprecations, module usage)
+- Organization OPA policies
+- Collection health and dependency audit (full Helm deployment)
+
+### Pipeline placement
+
+```
+Pre-commit → GHA (lint/unit) → Tekton (molecule/build) → APME (policy) → merge
+```
+
+See [APME-GUIDE.md](./APME-GUIDE.md) for deployment, policy management, and troubleshooting.
 
 ---
 
@@ -578,6 +600,16 @@ Workflow: `automation-collection-example/.github/workflows/dependency-scan.yml`
 - Ansible collection updates
 - License compliance
 - Supply chain security
+
+#### Content Signature Verification
+
+Tekton pipelines verify and sign content before promotion:
+
+- **Collections**: `ansible-galaxy collection verify --keyring` after Hub publish
+- **EE images**: `cosign sign` after build; `cosign verify` before manifest creation
+- **Release manifests**: `cosign sign-blob` at release creation; `cosign verify-blob` before QA/Prod dispatch
+
+See [CONTENT-SIGNING.md](./CONTENT-SIGNING.md) for full procedures.
 
 ### Pre-commit Integration
 

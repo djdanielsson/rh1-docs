@@ -28,6 +28,9 @@ This is the project workspace containing all repositories and planning documenta
 - **[Naming Conventions](./docs/NAMING-CONVENTIONS.md)** - Naming standards
 - **[Code Style](./docs/CODE-STYLE-GUIDE.md)** - Style guide
 - **[CI/CD Guide](./docs/CICD-GUIDE.md)** - GitHub Actions and Tekton pipelines
+- **[Content Signing](./docs/CONTENT-SIGNING.md)** - Cosign and Hub GPG signature validation
+- **[Vault Guide](./docs/VAULT-GUIDE.md)** - HashiCorp Vault, ESO, and AAP OIDC JIT access
+- **[APME Guide](./docs/APME-GUIDE.md)** - Ansible policy enforcement on PRs
 
 ## Repository Structure
 

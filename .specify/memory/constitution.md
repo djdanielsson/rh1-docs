@@ -99,17 +99,24 @@ This document defines the immutable principles that govern all technical decisio
 1. **No Secrets in Git**: Secrets referenced by name, stored in OCP Secrets or HashiCorp Vault
 2. **Reference by Name**: Code references secret names, not values
 3. **Least Privilege**: ServiceAccounts have minimum required permissions
+4. **Signed Content for Promotion**: Collections, EE images, and release manifests must be cryptographically signed before QA/Prod deployment
+5. **OIDC JIT for AAP Vault Access**: AAP job templates must use OIDC workload identity for Vault—no long-lived `VAULT_TOKEN` credentials in CaC or UI
+6. **APME Policy Compliance**: Ansible content must pass APME organization policy checks on every PR before merge
 
 ### Violations
 - ❌ Passwords, tokens, keys in Git
 - ❌ Cluster-admin permissions
 - ❌ Secrets in environment variables in Git
+- ❌ Long-lived Vault tokens in AAP credentials or job templates
 
 ### Compliance
 - ✅ Secrets in OCP/Vault, referenced by Tekton
 - ✅ AAP operator auto-generates admin passwords
 - ✅ ServiceAccounts with Role-based permissions
 - ✅ Credentials mounted as env vars at runtime
+- ✅ **Signed collections, EE images, and release manifests for QA/Prod promotion**
+- ✅ **AAP OIDC workload identity for just-in-time Vault access**
+- ✅ **APME policy gate on PRs for Ansible content repos**
 
 ---
 
@@ -130,5 +137,5 @@ This constitution can only be amended through:
 ---
 
 **Ratified**: 2025-10-27  
-**Last Amended**: 2025-01-05  
-**Version**: 1.1
+**Last Amended**: 2026-08-14  
+**Version**: 1.2
